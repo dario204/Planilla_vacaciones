@@ -4,6 +4,8 @@ const cors    = require('cors');
 const jwt     = require('jsonwebtoken');
 const bcrypt  = require('bcryptjs');
 const path    = require('path');
+const fs      = require('fs');
+const { exec } = require('child_process');
 const pool    = require('./db');
 
 const app  = express();
@@ -41,6 +43,45 @@ app.post('/api/login', (req, res) => {
 
   const token = jwt.sign({ app: 'vacaciones' }, process.env.JWT_SECRET, { expiresIn: '8h' });
   res.json({ token, expiresIn: 28800 }); // 8 horas en segundos
+});
+
+// ─── POST /api/cambiar-password ──────────────────────────────────────────────
+app.post('/api/cambiar-password', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No autorizado' });
+  try { jwt.verify(token, process.env.JWT_SECRET); } catch {
+    return res.status(401).json({ error: 'Sesión inválida o expirada' });
+  }
+
+  const { nueva } = req.body;
+  if (!nueva || nueva.length < 6)
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+
+  const hash = bcrypt.hashSync(nueva, 10);
+  const envPath = path.join(__dirname, '.env');
+
+  try {
+    let contenido = fs.readFileSync(envPath, 'utf8');
+    if (/^APP_PASSWORD_HASH=.*/m.test(contenido)) {
+      contenido = contenido.replace(/^APP_PASSWORD_HASH=.*/m, `APP_PASSWORD_HASH=${hash}`);
+    } else {
+      contenido += `\nAPP_PASSWORD_HASH=${hash}`;
+    }
+    fs.writeFileSync(envPath, contenido, 'utf8');
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo actualizar el archivo .env: ' + err.message });
+  }
+
+  // Actualizar en memoria para que el nuevo hash funcione de inmediato
+  process.env.APP_PASSWORD_HASH = hash;
+
+  // Reiniciar con PM2 en segundo plano (si está disponible)
+  exec('pm2 restart all', (err) => {
+    if (err) console.warn('PM2 no disponible o error al reiniciar:', err.message);
+  });
+
+  res.json({ message: 'Contraseña actualizada correctamente. La sesión actual sigue activa.' });
 });
 
 // ─── Todas las rutas /api requieren autenticación ─────────────────────────────

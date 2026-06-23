@@ -1,4 +1,6 @@
-const API       = 'http://localhost:3000/api';
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000/api'
+  : 'https://TU-APP.onrender.com/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';
 const EXPIRY_KEY= 'vac_expiry';
@@ -427,6 +429,56 @@ document.getElementById('btn-modal-guardar').addEventListener('click', async () 
   } finally {
     btn.disabled = false;
     btn.innerHTML = `<svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> Guardar Empleado`;
+  }
+});
+
+/* ── Modal: cambiar contraseña ── */
+const modalPassOverlay = document.getElementById('modal-pass-overlay');
+
+document.getElementById('btn-cambiar-pass').addEventListener('click', () => {
+  document.getElementById('p-nueva').value    = '';
+  document.getElementById('p-confirma').value = '';
+  document.getElementById('modal-pass-alert').className = 'alert';
+  modalPassOverlay.style.display = 'flex';
+  document.getElementById('p-nueva').focus();
+});
+
+document.getElementById('btn-modal-pass-close').addEventListener('click', () => {
+  modalPassOverlay.style.display = 'none';
+});
+modalPassOverlay.addEventListener('click', e => {
+  if (e.target === modalPassOverlay) modalPassOverlay.style.display = 'none';
+});
+
+document.getElementById('btn-modal-pass-guardar').addEventListener('click', async () => {
+  const nueva    = document.getElementById('p-nueva').value;
+  const confirma = document.getElementById('p-confirma').value;
+  const alertEl  = document.getElementById('modal-pass-alert');
+  const showPA   = (msg, tipo = 'error') => {
+    alertEl.className = `alert alert-${tipo} show`;
+    alertEl.textContent = msg;
+  };
+
+  if (!nueva || nueva.length < 6) { showPA('La contraseña debe tener al menos 6 caracteres.'); return; }
+  if (nueva !== confirma)          { showPA('Las contraseñas no coinciden.'); return; }
+
+  const btn = document.getElementById('btn-modal-pass-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  try {
+    const r = await apiFetch(`${API}/cambiar-password`, {
+      method: 'POST',
+      body: JSON.stringify({ nueva })
+    });
+    const data = await r.json();
+    if (!r.ok) { showPA(data.error); return; }
+    showPA(data.message, 'success');
+    setTimeout(() => { modalPassOverlay.style.display = 'none'; }, 2500);
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') showPA('Error de conexión con el servidor.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Guardar Contraseña`;
   }
 });
 
