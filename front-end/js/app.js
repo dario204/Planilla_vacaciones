@@ -1,6 +1,6 @@
 const API = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
-  : 'https://planilla-vacaciones.onrender.com';
+  : 'https://planilla-vacaciones.onrender.com/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';
 const EXPIRY_KEY= 'vac_expiry';
