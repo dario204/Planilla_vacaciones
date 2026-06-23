@@ -371,7 +371,13 @@ function showAlert(type, msg) {
 function hideAlert() { document.getElementById('form-alert').className = 'alert'; }
 function formatDate(d) {
   if (!d) return '—';
-  return new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' });
+  try {
+    const fecha = new Date(d);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone: 'UTC' });
+  } catch {
+    return '—';
+  }
 }
 
 /* ── Modal: nuevo empleado ── */
