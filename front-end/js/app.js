@@ -1,5 +1,5 @@
-// La API siempre está en el mismo servidor que sirve esta página
-const API = window.location.origin + '/api';
+
+const API = 'https://planilla-vacaciones.onrender.com/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';
 const EXPIRY_KEY= 'vac_expiry';
