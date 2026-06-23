@@ -1,26 +1,79 @@
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const jwt     = require('jsonwebtoken');
-const bcrypt  = require('bcryptjs');
-const path    = require('path');
-const fs      = require('fs');
-const { exec } = require('child_process');
-const pool    = require('./db');
+const express      = require('express');
+const cors         = require('cors');
+const jwt          = require('jsonwebtoken');
+const bcrypt       = require('bcryptjs');
+const path         = require('path');
+const fs           = require('fs');
+const { exec }     = require('child_process');
+const rateLimit    = require('express-rate-limit');
+const helmet       = require('helmet');
+const pool         = require('./db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// ── Validar que las variables de entorno críticas existan al arrancar ────────
+['JWT_SECRET', 'APP_PASSWORD_HASH', 'DATABASE_URL'].forEach(key => {
+  if (!process.env[key]) {
+    console.error(`❌ Variable de entorno faltante: ${key}. El servidor no puede iniciar.`);
+    process.exit(1);
+  }
+});
+if (process.env.JWT_SECRET === 'cambia_esta_clave_secreta_por_algo_largo_y_aleatorio_2026') {
+  console.error('❌ JWT_SECRET tiene el valor por defecto. Cambialo en el archivo .env antes de usar en producción.');
+  process.exit(1);
+}
 
-// ─── Servir el frontend estático ──────────────────────────────────────────────
+// ── Cabeceras de seguridad HTTP (Helmet) ────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'"],
+      styleSrc:   ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
+      fontSrc:    ["'self'", "https://fonts.gstatic.com"],
+      imgSrc:     ["'self'", "data:"],
+      connectSrc: ["'self'"],
+    }
+  }
+}));
+
+// ── CORS: solo permitir el mismo origen (localhost en producción local) ──────
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || `http://localhost:${PORT}`,
+  methods: ['GET', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10kb' })); // Limitar tamaño del body
+
+// ── Servir el frontend estático ──────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, '../front-end')));
 
-// ─── Middleware: verificar JWT en todas las rutas /api ────────────────────────
+// ── Rate limiting: login (máx. 5 intentos por IP cada 15 min) ───────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos fallidos. Esperá 15 minutos e intentá de nuevo.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Solo cuenta los intentos fallidos
+});
+
+// ── Rate limiting: API general (máx. 200 requests por IP cada 15 min) ───────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Demasiadas solicitudes. Esperá unos minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ── Middleware: verificar JWT en todas las rutas /api ────────────────────────
 function auth(req, res, next) {
   const header = req.headers['authorization'];
-  const token  = header && header.split(' ')[1]; // "Bearer <token>"
+  const token  = header && header.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No autorizado' });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
@@ -30,36 +83,55 @@ function auth(req, res, next) {
   }
 }
 
-// ─── POST /api/login ──────────────────────────────────────────────────────────
-app.post('/api/login', (req, res) => {
+// ── Helpers de validación ────────────────────────────────────────────────────
+function isPositiveInt(val) {
+  const n = parseInt(val, 10);
+  return Number.isFinite(n) && n > 0 && String(n) === String(val).trim();
+}
+
+function sanitizeText(val, maxLen = 200) {
+  if (typeof val !== 'string') return '';
+  return val.trim().slice(0, maxLen);
+}
+
+// ── POST /api/login ──────────────────────────────────────────────────────────
+app.post('/api/login', loginLimiter, (req, res) => {
   const { password } = req.body;
-  if (!password) return res.status(400).json({ error: 'Contraseña requerida' });
+  if (!password || typeof password !== 'string')
+    return res.status(400).json({ error: 'Contraseña requerida' });
+
+  // Limitar longitud para evitar ataques de bcrypt con strings muy largas
+  if (password.length > 128)
+    return res.status(400).json({ error: 'Contraseña inválida' });
 
   const hash = process.env.APP_PASSWORD_HASH;
-  if (!hash) return res.status(500).json({ error: 'Contraseña no configurada en el servidor' });
+  const ok   = bcrypt.compareSync(password, hash);
 
-  const ok = bcrypt.compareSync(password, hash);
+  // Respuesta idéntica en tiempo y mensaje para contraseña correcta/incorrecta
+  // (evita que se pueda detectar si el usuario existe o no)
   if (!ok) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
   const token = jwt.sign({ app: 'vacaciones' }, process.env.JWT_SECRET, { expiresIn: '8h' });
-  res.json({ token, expiresIn: 28800 }); // 8 horas en segundos
+  res.json({ token, expiresIn: 28800 });
 });
 
-// ─── POST /api/cambiar-password ──────────────────────────────────────────────
-app.post('/api/cambiar-password', (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'No autorizado' });
-  try { jwt.verify(token, process.env.JWT_SECRET); } catch {
-    return res.status(401).json({ error: 'Sesión inválida o expirada' });
-  }
-
+// ── POST /api/cambiar-password ───────────────────────────────────────────────
+app.post('/api/cambiar-password', auth, (req, res) => {
   const { nueva } = req.body;
-  if (!nueva || nueva.length < 6)
+  if (!nueva || typeof nueva !== 'string' || nueva.length < 6)
     return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  if (nueva.length > 128)
+    return res.status(400).json({ error: 'La contraseña no puede superar los 128 caracteres' });
 
-  const hash = bcrypt.hashSync(nueva, 10);
+  const hash    = bcrypt.hashSync(nueva, 10);
   const envPath = path.join(__dirname, '.env');
+
+  // Validar que el path del .env es el esperado (evita path traversal)
+  const resolvedPath = path.resolve(envPath);
+  const expectedBase = path.resolve(__dirname);
+  if (!resolvedPath.startsWith(expectedBase)) {
+    return res.status(500).json({ error: 'Error interno de configuración' });
+  }
 
   try {
     let contenido = fs.readFileSync(envPath, 'utf8');
@@ -73,10 +145,8 @@ app.post('/api/cambiar-password', (req, res) => {
     return res.status(500).json({ error: 'No se pudo actualizar el archivo .env: ' + err.message });
   }
 
-  // Actualizar en memoria para que el nuevo hash funcione de inmediato
   process.env.APP_PASSWORD_HASH = hash;
 
-  // Reiniciar con PM2 en segundo plano (si está disponible)
   exec('pm2 restart all', (err) => {
     if (err) console.warn('PM2 no disponible o error al reiniciar:', err.message);
   });
@@ -84,12 +154,14 @@ app.post('/api/cambiar-password', (req, res) => {
   res.json({ message: 'Contraseña actualizada correctamente. La sesión actual sigue activa.' });
 });
 
-// ─── Todas las rutas /api requieren autenticación ─────────────────────────────
-app.use('/api', auth);
+// ── Todas las rutas /api requieren autenticación + rate limiting ─────────────
+app.use('/api', apiLimiter, auth);
 
-// ─── GET todos los empleados ──────────────────────────────────────────────────
+// ── GET todos los empleados ──────────────────────────────────────────────────
 app.get('/api/empleados', async (req, res) => {
-  const { q, dependencia } = req.query;
+  const q          = sanitizeText(req.query.q || '', 100);
+  const dependencia = sanitizeText(req.query.dependencia || '', 100);
+
   let query = `
     SELECT id, region, dependencia, nombre_apellido, dni,
            dias_totales, dias_tomados,
@@ -112,54 +184,81 @@ app.get('/api/empleados', async (req, res) => {
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error GET /empleados:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── POST crear empleado ──────────────────────────────────────────────────────
+// ── POST crear empleado ──────────────────────────────────────────────────────
 app.post('/api/empleados', async (req, res) => {
-  const { nombre_apellido, dni, dependencia, region, dias_totales } = req.body;
-  if (!nombre_apellido || !dni || !dependencia || !dias_totales)
-    return res.status(400).json({ error: 'Nombre, DNI, dependencia y días totales son obligatorios' });
+  const nombre_apellido = sanitizeText(req.body.nombre_apellido || '', 150);
+  const dni             = sanitizeText(req.body.dni || '', 20);
+  const dependencia     = sanitizeText(req.body.dependencia || '', 100);
+  const region          = sanitizeText(req.body.region || 'CORDOBA', 50);
+  const dias_totales    = parseInt(req.body.dias_totales, 10);
+
+  if (!nombre_apellido) return res.status(400).json({ error: 'El nombre es obligatorio' });
+  if (!dni || !/^\d{1,15}$/.test(dni)) return res.status(400).json({ error: 'DNI inválido (solo dígitos, máx. 15)' });
+  if (!dependencia)  return res.status(400).json({ error: 'La dependencia es obligatoria' });
+  if (!Number.isFinite(dias_totales) || dias_totales <= 0 || dias_totales > 365)
+    return res.status(400).json({ error: 'Días totales debe ser un número entre 1 y 365' });
+
   try {
     const { rows } = await pool.query(
       `INSERT INTO empleados (nombre_apellido, dni, dependencia, region, dias_totales, dias_tomados)
        VALUES ($1, $2, $3, $4, $5, 0)
        RETURNING id, region, dependencia, nombre_apellido, dni, dias_totales, dias_tomados,
                  (dias_totales - dias_tomados) AS saldo_disponible`,
-      [nombre_apellido.toUpperCase(), dni, dependencia.toUpperCase(), (region || 'CORDOBA').toUpperCase(), dias_totales]
+      [nombre_apellido.toUpperCase(), dni, dependencia.toUpperCase(), region.toUpperCase(), dias_totales]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un empleado con ese DNI' });
-    res.status(500).json({ error: err.message });
+    console.error('Error POST /empleados:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── GET empleado por ID ──────────────────────────────────────────────────────
+// ── GET empleado por ID ──────────────────────────────────────────────────────
 app.get('/api/empleados/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id <= 0)
+    return res.status(400).json({ error: 'ID inválido' });
+
   try {
     const { rows } = await pool.query(
       `SELECT id, region, dependencia, nombre_apellido, dni,
               dias_totales, dias_tomados,
               (dias_totales - dias_tomados) AS saldo_disponible
        FROM empleados WHERE id = $1`,
-      [req.params.id]
+      [id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error GET /empleados/:id:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── POST cargar días de vacaciones ──────────────────────────────────────────
+// ── POST cargar días de vacaciones ──────────────────────────────────────────
 app.post('/api/empleados/:id/vacaciones', async (req, res) => {
-  const { dias, descripcion, fecha } = req.body;
-  const empleadoId = req.params.id;
+  const empleadoId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(empleadoId) || empleadoId <= 0)
+    return res.status(400).json({ error: 'ID inválido' });
 
-  if (!dias || isNaN(dias) || dias <= 0)
-    return res.status(400).json({ error: 'La cantidad de días debe ser un número positivo' });
+  const dias       = parseInt(req.body.dias, 10);
+  const descripcion = sanitizeText(req.body.descripcion || '', 300);
+  const fecha       = sanitizeText(req.body.fecha || '', 10);
+
+  if (!Number.isFinite(dias) || dias <= 0 || dias > 365)
+    return res.status(400).json({ error: 'La cantidad de días debe ser un número entre 1 y 365' });
+
+  // Validar formato de fecha YYYY-MM-DD
+  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha))
+    return res.status(400).json({ error: 'Formato de fecha inválido' });
+
+  const fechaFinal = fecha || new Date().toISOString().split('T')[0];
 
   const client = await pool.connect();
   try {
@@ -168,7 +267,10 @@ app.post('/api/empleados/:id/vacaciones', async (req, res) => {
       'SELECT dias_totales, dias_tomados FROM empleados WHERE id = $1 FOR UPDATE',
       [empleadoId]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
 
     const saldo = rows[0].dias_totales - rows[0].dias_tomados;
     if (dias > saldo) {
@@ -182,7 +284,7 @@ app.post('/api/empleados/:id/vacaciones', async (req, res) => {
     );
     await client.query(
       'INSERT INTO movimientos (empleado_id, dias, descripcion, fecha) VALUES ($1, $2, $3, $4)',
-      [empleadoId, dias, descripcion || null, fecha || new Date().toISOString().split('T')[0]]
+      [empleadoId, dias, descripcion || null, fechaFinal]
     );
     await client.query('COMMIT');
 
@@ -196,28 +298,34 @@ app.post('/api/empleados/:id/vacaciones', async (req, res) => {
     res.json({ message: `✅ Se cargaron ${dias} día(s) correctamente`, empleado: updated.rows[0] });
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    console.error('Error POST /vacaciones:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
     client.release();
   }
 });
 
-// ─── GET historial de movimientos ─────────────────────────────────────────────
+// ── GET historial de movimientos ─────────────────────────────────────────────
 app.get('/api/empleados/:id/movimientos', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id <= 0)
+    return res.status(400).json({ error: 'ID inválido' });
+
   try {
     const { rows } = await pool.query(
       `SELECT id, dias, descripcion, fecha, created_at
        FROM movimientos WHERE empleado_id = $1
        ORDER BY fecha DESC, created_at DESC`,
-      [req.params.id]
+      [id]
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error GET /movimientos:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── GET dependencias únicas ──────────────────────────────────────────────────
+// ── GET dependencias únicas ──────────────────────────────────────────────────
 app.get('/api/dependencias', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -227,11 +335,12 @@ app.get('/api/dependencias', async (req, res) => {
     );
     res.json(rows.map(r => r.dependencia));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error GET /dependencias:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── GET estadísticas ─────────────────────────────────────────────────────────
+// ── GET estadísticas ─────────────────────────────────────────────────────────
 app.get('/api/stats', async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -243,48 +352,71 @@ app.get('/api/stats', async (req, res) => {
     `);
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error GET /stats:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── DELETE empleado ──────────────────────────────────────────────────────────
+// ── DELETE empleado ──────────────────────────────────────────────────────────
 app.delete('/api/empleados/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id <= 0)
+    return res.status(400).json({ error: 'ID inválido' });
+
   try {
-    const { rows } = await pool.query('SELECT nombre_apellido FROM empleados WHERE id = $1', [req.params.id]);
+    const { rows } = await pool.query('SELECT nombre_apellido FROM empleados WHERE id = $1', [id]);
     if (!rows.length) return res.status(404).json({ error: 'Empleado no encontrado' });
-    await pool.query('DELETE FROM empleados WHERE id = $1', [req.params.id]);
+    await pool.query('DELETE FROM empleados WHERE id = $1', [id]);
     res.json({ message: `Empleado ${rows[0].nombre_apellido} eliminado correctamente` });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error DELETE /empleados:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
-// ─── DELETE movimiento (con reversión) ───────────────────────────────────────
+// ── DELETE movimiento (con reversión) ────────────────────────────────────────
 app.delete('/api/movimientos/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id <= 0)
+    return res.status(400).json({ error: 'ID inválido' });
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const { rows } = await client.query('SELECT * FROM movimientos WHERE id = $1', [req.params.id]);
-    if (!rows.length) return res.status(404).json({ error: 'Movimiento no encontrado' });
+    const { rows } = await client.query('SELECT * FROM movimientos WHERE id = $1', [id]);
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Movimiento no encontrado' });
+    }
 
     const mov = rows[0];
     await client.query(
       'UPDATE empleados SET dias_tomados = GREATEST(0, dias_tomados - $1), updated_at = NOW() WHERE id = $2',
       [mov.dias, mov.empleado_id]
     );
-    await client.query('DELETE FROM movimientos WHERE id = $1', [req.params.id]);
+    await client.query('DELETE FROM movimientos WHERE id = $1', [id]);
     await client.query('COMMIT');
     res.json({ message: `Movimiento eliminado. Se revirtieron ${mov.dias} día(s)` });
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    console.error('Error DELETE /movimientos:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
     client.release();
   }
 });
 
-app.use(express.static(path.join(__dirname, '../front-end')));
+// ── Capturar rutas no encontradas (evitar exponer stack traces) ───────────────
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
 
-app.listen(PORT, () => {
-  console.log(` Servidor corriendo en http://localhost:${PORT}`);
+// ── Manejador global de errores ───────────────────────────────────────────────
+app.use((err, req, res, _next) => {
+  console.error('Error no manejado:', err.message);
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
+
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
 });
