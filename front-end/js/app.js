@@ -1,6 +1,5 @@
-const API = window.location.hostname === 'localhost'
-  ? 'http://localhost:3000/api'
-  : 'https://planilla-vacaciones.onrender.com/api';
+// La API siempre está en el mismo servidor que sirve esta página
+const API = window.location.origin + '/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';
 const EXPIRY_KEY= 'vac_expiry';
@@ -75,7 +74,7 @@ async function handleLogin() {
   btn.textContent = 'Verificando…';
 
   try {
-    const r = await fetch(`${API.replace('/api', '')}/api/login`, {
+    const r = await fetch(`${API}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pass })

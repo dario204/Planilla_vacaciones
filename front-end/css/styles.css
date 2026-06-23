@@ -485,3 +485,21 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   transition: all .15s;
 }
 .btn-logout:hover { background: rgba(255,255,255,.15); color: white; }
+/* ── Botón mostrar/ocultar contraseña ── */
+.btn-show-pass {
+  position: absolute;
+  right: .6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: .2rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color .15s;
+}
+.btn-show-pass:hover { color: var(--slate); }
+.btn-show-pass svg { width: 17px; height: 17px; }

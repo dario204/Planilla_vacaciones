@@ -1,2 +1,18 @@
+# Dependencias
 node_modules/
+
+# Variables de entorno — NUNCA subir al repositorio
 .env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# PM2
+.pm2/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
