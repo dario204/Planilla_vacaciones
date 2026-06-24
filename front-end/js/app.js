@@ -498,6 +498,8 @@ if (isTokenValid()) {
 }
 
 /* ══ GRILLA DE VACACIONES ════════════════════════════════════════════════════ */
+// Solo ejecutar si estamos en grilla.html
+if (document.getElementById('grilla-contenido')) {
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MESES_COMPLETO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -716,3 +718,5 @@ document.getElementById('btn-grilla-csv').addEventListener('click', () => {
 
 /* ── Inicio ── */
 cargarGrilla();
+
+} // fin if grilla.html
