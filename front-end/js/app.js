@@ -1,4 +1,3 @@
-
 const API = 'https://planilla-vacaciones.onrender.com/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';
@@ -98,6 +97,9 @@ async function handleLogin() {
     btn.innerHTML = `<svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Ingresar`;
   }
 }
+
+/* ══ BLOQUE INDEX.HTML — solo ejecutar si estamos en index.html ══════════════ */
+if (document.getElementById('btn-login')) {
 
 document.getElementById('btn-login').addEventListener('click', handleLogin);
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
@@ -497,6 +499,8 @@ if (isTokenValid()) {
   showLogin();
 }
 
+} // fin if index.html
+
 /* ══ GRILLA DE VACACIONES ════════════════════════════════════════════════════ */
 // Solo ejecutar si estamos en grilla.html
 if (document.getElementById('grilla-contenido')) {
@@ -719,4 +723,4 @@ document.getElementById('btn-grilla-csv').addEventListener('click', () => {
 /* ── Inicio ── */
 cargarGrilla();
 
-} // fin if grilla.html
+} 
