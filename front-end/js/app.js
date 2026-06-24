@@ -38,7 +38,8 @@ async function apiFetch(url, options = {}) {
 
   if (res.status === 401) {
     clearToken();
-    showLogin();
+    if (document.getElementById('login-screen')) showLogin();
+    else window.location.href = 'index.html';
     throw new Error('Sesión expirada');
   }
   return res;
@@ -98,6 +99,77 @@ async function handleLogin() {
   }
 }
 
+/* ── Helpers de formato (globales, usadas en ambas páginas) ── */
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    const fecha = new Date(d);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone: 'UTC' });
+  } catch {
+    return '—';
+  }
+}
+
+/* ── Funciones globales — deben estar en window scope para los onclick inline ── */
+
+async function eliminarEmpleado(id, nombre) {
+  if (!confirm(`¿Eliminar a ${nombre}?\nSe borrarán todos sus movimientos. Esta acción no se puede deshacer.`)) return;
+  try {
+    const r = await apiFetch(`${API}/empleados/${id}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error); return; }
+    allEmps = allEmps.filter(x => x.id !== id);
+    applyFilter();
+    if (selectedId === id) {
+      selectedId = null;
+      document.getElementById('form-placeholder').style.display = 'block';
+      document.getElementById('form-content').style.display     = 'none';
+      document.getElementById('history-panel').style.display    = 'none';
+    }
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') alert('Error al eliminar el empleado.');
+  }
+}
+
+async function deleteMovimiento(movId) {
+  if (!confirm('¿Eliminar este movimiento? Se revertirán los días descontados.')) return;
+  try {
+    const r = await apiFetch(`${API}/movimientos/${movId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error); return; }
+    const r2  = await apiFetch(`${API}/empleados/${selectedId}`);
+    const emp = await r2.json();
+    const idx = allEmps.findIndex(x => x.id === selectedId);
+    if (idx !== -1) allEmps[idx] = emp;
+    updateCard(emp);
+    renderTable();
+    loadHistory(selectedId);
+    showAlert('success', d.message);
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') alert('Error al eliminar el movimiento');
+  }
+}
+
+function selectEmpleado(id) {
+  selectedId = id;
+  renderTable();
+  const e = allEmps.find(x => x.id === id);
+  if (!e) return;
+
+  document.getElementById('form-placeholder').style.display = 'none';
+  document.getElementById('form-content').style.display     = 'block';
+  document.getElementById('history-panel').style.display    = 'block';
+
+  hideAlert();
+  document.getElementById('inp-dias').value  = '';
+  document.getElementById('inp-desc').value  = '';
+  document.getElementById('inp-fecha').value = new Date().toISOString().split('T')[0];
+
+  updateCard(e);
+  loadHistory(id);
+}
+
 /* ══ BLOQUE INDEX.HTML — solo ejecutar si estamos en index.html ══════════════ */
 if (document.getElementById('btn-login')) {
 
@@ -151,7 +223,7 @@ function applyFilter() {
   const q   = document.getElementById('search-input').value.trim().toUpperCase();
   const dep = document.getElementById('dep-filter').value;
   filtered  = allEmps.filter(e => {
-    const matchQ   = !q   || e.nombre_apellido.toUpperCase().includes(q) || e.dni.includes(q);
+    const matchQ   = !q   || (e.nombre_apellido || '').toUpperCase().includes(q) || e.dni.includes(q);
     const matchDep = !dep || e.dependencia === dep;
     return matchQ && matchDep;
   });
@@ -198,32 +270,12 @@ function renderTable() {
       <td><span class="badge ${saldoCls}">${e.saldo_disponible}d</span></td>
       <td>
         <button class="btn-delete-row" title="Eliminar empleado"
-          onclick="event.stopPropagation(); eliminarEmpleado(${e.id}, '${(e.nombre_apellido || '').replace(/'/g,"\\'")}')">          
+          onclick="event.stopPropagation(); eliminarEmpleado(${e.id}, '${(e.nombre_apellido || '').replace(/'/g,"\\'")}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </td>
     </tr>`;
   }).join('');
-}
-
-/* ── Seleccionar empleado ── */
-function selectEmpleado(id) {
-  selectedId = id;
-  renderTable();
-  const e = allEmps.find(x => x.id === id);
-  if (!e) return;
-
-  document.getElementById('form-placeholder').style.display = 'none';
-  document.getElementById('form-content').style.display     = 'block';
-  document.getElementById('history-panel').style.display    = 'block';
-
-  hideAlert();
-  document.getElementById('inp-dias').value  = '';
-  document.getElementById('inp-desc').value  = '';
-  document.getElementById('inp-fecha').value = new Date().toISOString().split('T')[0];
-
-  updateCard(e);
-  loadHistory(id);
 }
 
 function updateCard(e) {
@@ -234,26 +286,6 @@ function updateCard(e) {
   document.getElementById('card-saldo').textContent   = e.saldo_disponible;
   const pct = e.dias_totales > 0 ? Math.round((e.dias_tomados / e.dias_totales) * 100) : 0;
   document.getElementById('card-progress').style.width = pct + '%';
-}
-
-/* ── Eliminar empleado ── */
-async function eliminarEmpleado(id, nombre) {
-  if (!confirm(`¿Eliminar a ${nombre}?\nSe borrarán todos sus movimientos. Esta acción no se puede deshacer.`)) return;
-  try {
-    const r = await apiFetch(`${API}/empleados/${id}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error); return; }
-    allEmps = allEmps.filter(x => x.id !== id);
-    applyFilter();
-    if (selectedId === id) {
-      selectedId = null;
-      document.getElementById('form-placeholder').style.display = 'block';
-      document.getElementById('form-content').style.display     = 'none';
-      document.getElementById('history-panel').style.display    = 'none';
-    }
-  } catch (err) {
-    if (err.message !== 'Sesión expirada') alert('Error al eliminar el empleado.');
-  }
 }
 
 /* ── Cargar días ── */
@@ -315,25 +347,6 @@ async function loadHistory(id) {
   } catch { list.innerHTML = '<div class="history-empty" style="color:var(--red)">Error al cargar historial</div>'; }
 }
 
-async function deleteMovimiento(movId) {
-  if (!confirm('¿Eliminar este movimiento? Se revertirán los días descontados.')) return;
-  try {
-    const r = await apiFetch(`${API}/movimientos/${movId}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error); return; }
-    const r2  = await apiFetch(`${API}/empleados/${selectedId}`);
-    const emp = await r2.json();
-    const idx = allEmps.findIndex(x => x.id === selectedId);
-    if (idx !== -1) allEmps[idx] = emp;
-    updateCard(emp);
-    renderTable();
-    loadHistory(selectedId);
-    showAlert('success', d.message);
-  } catch (err) {
-    if (err.message !== 'Sesión expirada') alert('Error al eliminar el movimiento');
-  }
-}
-
 /* ── CSV ── */
 function descargarCSV() {
   const datos = filtered.length > 0 ? filtered : allEmps;
@@ -363,23 +376,13 @@ document.getElementById('btn-prev').addEventListener('click', () => { page--; re
 document.getElementById('btn-next').addEventListener('click', () => { page++; renderTable(); });
 document.getElementById('btn-refresh-hist').addEventListener('click', () => selectedId && loadHistory(selectedId));
 
-/* ── Helpers ── */
+/* ── Helpers de alerta ── */
 function showAlert(type, msg) {
   const el = document.getElementById('form-alert');
   el.className = `alert alert-${type} show`;
   el.textContent = msg;
 }
 function hideAlert() { document.getElementById('form-alert').className = 'alert'; }
-function formatDate(d) {
-  if (!d) return '—';
-  try {
-    const fecha = new Date(d);
-    if (isNaN(fecha.getTime())) return '—';
-    return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone: 'UTC' });
-  } catch {
-    return '—';
-  }
-}
 
 /* ── Modal: nuevo empleado ── */
 const modalOverlay = document.getElementById('modal-overlay');
@@ -488,7 +491,6 @@ document.getElementById('btn-modal-pass-guardar').addEventListener('click', asyn
     btn.innerHTML = `<svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> Guardar Contraseña`;
   }
 });
-
 
 /* ══ INICIO ═════════════════════════════════════════════════════════════════ */
 // Si ya hay sesión válida, mostrar app directamente
@@ -723,5 +725,4 @@ document.getElementById('btn-grilla-csv').addEventListener('click', () => {
 /* ── Inicio ── */
 cargarGrilla();
 
-} 
-//.
+} // fin if grilla.html
