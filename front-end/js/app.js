@@ -28,14 +28,11 @@ function isTokenValid() {
   return token && Date.now() < expiry;
 }
 
-// Wrapper de fetch que agrega el header Authorization
 async function apiFetch(url, options = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-
   const res = await fetch(url, { ...options, headers });
-
   if (res.status === 401) {
     clearToken();
     if (document.getElementById('login-screen')) showLogin();
@@ -58,7 +55,6 @@ function showApp() {
   document.getElementById('app-screen').style.display   = 'block';
 }
 
-/* ── Login ── */
 async function handleLogin() {
   const pass  = document.getElementById('login-pass').value;
   const alert = document.getElementById('login-alert');
@@ -80,13 +76,11 @@ async function handleLogin() {
       body: JSON.stringify({ password: pass })
     });
     const data = await r.json();
-
     if (!r.ok) {
       alert.className = 'alert alert-error show';
       alert.textContent = data.error || 'Contraseña incorrecta.';
       return;
     }
-
     saveToken(data.token, data.expiresIn);
     showApp();
     initApp();
@@ -99,145 +93,40 @@ async function handleLogin() {
   }
 }
 
-/* ── Helpers de formato (globales, usadas en ambas páginas) ── */
+/* ══ FUNCIONES GLOBALES
+     Deben estar fuera de cualquier bloque if para ser accesibles
+     desde onclick inline y desde funciones entre sí.
+════════════════════════════════════════════════════════════════════════════ */
+
 function formatDate(d) {
   if (!d) return '—';
   try {
     const fecha = new Date(d);
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone: 'UTC' });
-  } catch {
-    return '—';
-  }
+  } catch { return '—'; }
 }
 
-/* ── Funciones globales — deben estar en window scope para los onclick inline ── */
-
-async function eliminarEmpleado(id, nombre) {
-  if (!confirm(`¿Eliminar a ${nombre}?\nSe borrarán todos sus movimientos. Esta acción no se puede deshacer.`)) return;
-  try {
-    const r = await apiFetch(`${API}/empleados/${id}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error); return; }
-    allEmps = allEmps.filter(x => x.id !== id);
-    applyFilter();
-    if (selectedId === id) {
-      selectedId = null;
-      document.getElementById('form-placeholder').style.display = 'block';
-      document.getElementById('form-content').style.display     = 'none';
-      document.getElementById('history-panel').style.display    = 'none';
-    }
-  } catch (err) {
-    if (err.message !== 'Sesión expirada') alert('Error al eliminar el empleado.');
-  }
+function showAlert(type, msg) {
+  const el = document.getElementById('form-alert');
+  el.className = `alert alert-${type} show`;
+  el.textContent = msg;
 }
 
-async function deleteMovimiento(movId) {
-  if (!confirm('¿Eliminar este movimiento? Se revertirán los días descontados.')) return;
-  try {
-    const r = await apiFetch(`${API}/movimientos/${movId}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (!r.ok) { alert(d.error); return; }
-    const r2  = await apiFetch(`${API}/empleados/${selectedId}`);
-    const emp = await r2.json();
-    const idx = allEmps.findIndex(x => x.id === selectedId);
-    if (idx !== -1) allEmps[idx] = emp;
-    updateCard(emp);
-    renderTable();
-    loadHistory(selectedId);
-    showAlert('success', d.message);
-  } catch (err) {
-    if (err.message !== 'Sesión expirada') alert('Error al eliminar el movimiento');
-  }
+function hideAlert() {
+  document.getElementById('form-alert').className = 'alert';
 }
 
-function selectEmpleado(id) {
-  selectedId = id;
-  renderTable();
-  const e = allEmps.find(x => x.id === id);
-  if (!e) return;
-
-  document.getElementById('form-placeholder').style.display = 'none';
-  document.getElementById('form-content').style.display     = 'block';
-  document.getElementById('history-panel').style.display    = 'block';
-
-  hideAlert();
-  document.getElementById('inp-dias').value  = '';
-  document.getElementById('inp-desc').value  = '';
-  document.getElementById('inp-fecha').value = new Date().toISOString().split('T')[0];
-
-  updateCard(e);
-  loadHistory(id);
+function updateCard(e) {
+  document.getElementById('card-name').textContent    = e.nombre_apellido;
+  document.getElementById('card-dep').textContent     = `${e.dependencia || '—'} · DNI ${e.dni}`;
+  document.getElementById('card-total').textContent   = e.dias_totales;
+  document.getElementById('card-tomados').textContent = e.dias_tomados;
+  document.getElementById('card-saldo').textContent   = e.saldo_disponible;
+  const pct = e.dias_totales > 0 ? Math.round((e.dias_tomados / e.dias_totales) * 100) : 0;
+  document.getElementById('card-progress').style.width = pct + '%';
 }
 
-/* ══ BLOQUE INDEX.HTML — solo ejecutar si estamos en index.html ══════════════ */
-if (document.getElementById('btn-login')) {
-
-document.getElementById('btn-login').addEventListener('click', handleLogin);
-document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
-
-document.getElementById('btn-logout').addEventListener('click', () => {
-  clearToken();
-  allEmps = []; filtered = []; selectedId = null;
-  showLogin();
-});
-
-/* ══ APP PRINCIPAL ══════════════════════════════════════════════════════════ */
-
-function initApp() {
-  document.getElementById('header-date').textContent =
-    new Date().toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  Promise.all([loadDeps(), loadEmpleados()]);
-}
-
-async function loadDeps() {
-  try {
-    const r    = await apiFetch(`${API}/dependencias`);
-    const deps = await r.json();
-    const sel  = document.getElementById('dep-filter');
-    // Limpiar opciones previas salvo "Todas las áreas"
-    while (sel.options.length > 1) sel.remove(1);
-    deps.forEach(d => {
-      const o = document.createElement('option');
-      o.value = d; o.textContent = d;
-      sel.appendChild(o);
-    });
-  } catch { /* silencioso si sesión expiró */ }
-}
-
-async function loadEmpleados() {
-  try {
-    const r = await apiFetch(`${API}/empleados`);
-    allEmps = await r.json();
-    applyFilter();
-  } catch {
-    document.getElementById('emp-tbody').innerHTML =
-      `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--red)">
-        ⚠️ No se pudo cargar la lista de empleados.
-      </td></tr>`;
-  }
-}
-
-/* ── Filtros ── */
-function applyFilter() {
-  const q   = document.getElementById('search-input').value.trim().toUpperCase();
-  const dep = document.getElementById('dep-filter').value;
-  filtered  = allEmps.filter(e => {
-    const matchQ   = !q   || (e.nombre_apellido || '').toUpperCase().includes(q) || e.dni.includes(q);
-    const matchDep = !dep || e.dependencia === dep;
-    return matchQ && matchDep;
-  });
-  page = 0;
-  renderTable();
-}
-
-function clearFilters() {
-  document.getElementById('search-input').value = '';
-  document.getElementById('dep-filter').value   = '';
-  applyFilter();
-}
-
-/* ── Tabla ── */
 function renderTable() {
   const start = page * PAGE_SIZE;
   const slice = filtered.slice(start, start + PAGE_SIZE);
@@ -278,14 +167,152 @@ function renderTable() {
   }).join('');
 }
 
-function updateCard(e) {
-  document.getElementById('card-name').textContent    = e.nombre_apellido;
-  document.getElementById('card-dep').textContent     = `${e.dependencia || '—'} · DNI ${e.dni}`;
-  document.getElementById('card-total').textContent   = e.dias_totales;
-  document.getElementById('card-tomados').textContent = e.dias_tomados;
-  document.getElementById('card-saldo').textContent   = e.saldo_disponible;
-  const pct = e.dias_totales > 0 ? Math.round((e.dias_tomados / e.dias_totales) * 100) : 0;
-  document.getElementById('card-progress').style.width = pct + '%';
+function applyFilter() {
+  const q   = document.getElementById('search-input').value.trim().toUpperCase();
+  const dep = document.getElementById('dep-filter').value;
+  filtered  = allEmps.filter(e => {
+    const matchQ   = !q   || (e.nombre_apellido || '').toUpperCase().includes(q) || e.dni.includes(q);
+    const matchDep = !dep || e.dependencia === dep;
+    return matchQ && matchDep;
+  });
+  page = 0;
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('dep-filter').value   = '';
+  applyFilter();
+}
+
+async function loadHistory(id) {
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="history-empty">Cargando…</div>';
+  try {
+    const r    = await apiFetch(`${API}/empleados/${id}/movimientos`);
+    const movs = await r.json();
+    if (!movs.length) {
+      list.innerHTML = '<div class="history-empty">Sin movimientos registrados</div>';
+      return;
+    }
+    list.innerHTML = movs.map(m => `
+      <div class="history-item">
+        <div class="history-meta">
+          <div class="history-desc">${m.descripcion || 'Sin descripción'}</div>
+          <div class="history-date">${formatDate(m.fecha)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="history-days">-${m.dias}d</span>
+          <button class="btn btn-danger" onclick="deleteMovimiento(${m.id})">✕</button>
+        </div>
+      </div>`).join('');
+  } catch {
+    list.innerHTML = '<div class="history-empty" style="color:var(--red)">Error al cargar historial</div>';
+  }
+}
+
+function selectEmpleado(id) {
+  selectedId = id;
+  renderTable();
+  const e = allEmps.find(x => x.id === id);
+  if (!e) return;
+
+  document.getElementById('form-placeholder').style.display = 'none';
+  document.getElementById('form-content').style.display     = 'block';
+  document.getElementById('history-panel').style.display    = 'block';
+
+  hideAlert();
+  document.getElementById('inp-dias').value  = '';
+  document.getElementById('inp-desc').value  = '';
+  document.getElementById('inp-fecha').value = new Date().toISOString().split('T')[0];
+
+  updateCard(e);
+  loadHistory(id);
+}
+
+async function eliminarEmpleado(id, nombre) {
+  if (!confirm(`¿Eliminar a ${nombre}?\nSe borrarán todos sus movimientos. Esta acción no se puede deshacer.`)) return;
+  try {
+    const r = await apiFetch(`${API}/empleados/${id}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error); return; }
+    allEmps = allEmps.filter(x => x.id !== id);
+    applyFilter();
+    if (selectedId === id) {
+      selectedId = null;
+      document.getElementById('form-placeholder').style.display = 'block';
+      document.getElementById('form-content').style.display     = 'none';
+      document.getElementById('history-panel').style.display    = 'none';
+    }
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') alert('Error al eliminar el empleado.');
+  }
+}
+
+async function deleteMovimiento(movId) {
+  if (!confirm('¿Eliminar este movimiento? Se revertirán los días descontados.')) return;
+  try {
+    const r = await apiFetch(`${API}/movimientos/${movId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error); return; }
+    const r2  = await apiFetch(`${API}/empleados/${selectedId}`);
+    const emp = await r2.json();
+    const idx = allEmps.findIndex(x => x.id === selectedId);
+    if (idx !== -1) allEmps[idx] = emp;
+    updateCard(emp);
+    renderTable();
+    loadHistory(selectedId);
+    showAlert('success', d.message);
+  } catch (err) {
+    if (err.message !== 'Sesión expirada') alert('Error al eliminar el movimiento');
+  }
+}
+
+/* ══ BLOQUE INDEX.HTML ═══════════════════════════════════════════════════════ */
+if (document.getElementById('btn-login')) {
+
+document.getElementById('btn-login').addEventListener('click', handleLogin);
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  clearToken();
+  allEmps = []; filtered = []; selectedId = null;
+  showLogin();
+});
+
+/* ══ APP PRINCIPAL ══════════════════════════════════════════════════════════ */
+
+function initApp() {
+  document.getElementById('header-date').textContent =
+    new Date().toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  Promise.all([loadDeps(), loadEmpleados()]);
+}
+
+async function loadDeps() {
+  try {
+    const r    = await apiFetch(`${API}/dependencias`);
+    const deps = await r.json();
+    const sel  = document.getElementById('dep-filter');
+    while (sel.options.length > 1) sel.remove(1);
+    deps.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d; o.textContent = d;
+      sel.appendChild(o);
+    });
+  } catch { /* silencioso si sesión expiró */ }
+}
+
+async function loadEmpleados() {
+  try {
+    const r = await apiFetch(`${API}/empleados`);
+    allEmps = await r.json();
+    applyFilter();
+  } catch {
+    document.getElementById('emp-tbody').innerHTML =
+      `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--red)">
+        ⚠️ No se pudo cargar la lista de empleados.
+      </td></tr>`;
+  }
 }
 
 /* ── Cargar días ── */
@@ -325,27 +352,17 @@ document.getElementById('btn-cargar').addEventListener('click', async () => {
   }
 });
 
-/* ── Historial ── */
-async function loadHistory(id) {
-  const list = document.getElementById('history-list');
-  list.innerHTML = '<div class="history-empty">Cargando…</div>';
-  try {
-    const r    = await apiFetch(`${API}/empleados/${id}/movimientos`);
-    const movs = await r.json();
-    if (!movs.length) { list.innerHTML = '<div class="history-empty">Sin movimientos registrados</div>'; return; }
-    list.innerHTML = movs.map(m => `
-      <div class="history-item">
-        <div class="history-meta">
-          <div class="history-desc">${m.descripcion || 'Sin descripción'}</div>
-          <div class="history-date">${formatDate(m.fecha)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <span class="history-days">-${m.dias}d</span>
-          <button class="btn btn-danger" onclick="deleteMovimiento(${m.id})">✕</button>
-        </div>
-      </div>`).join('');
-  } catch { list.innerHTML = '<div class="history-empty" style="color:var(--red)">Error al cargar historial</div>'; }
-}
+/* ── Eventos ── */
+let debounceTimer;
+document.getElementById('search-input').addEventListener('input', () => {
+  clearTimeout(debounceTimer); debounceTimer = setTimeout(applyFilter, 280);
+});
+document.getElementById('dep-filter').addEventListener('change', applyFilter);
+document.getElementById('btn-clear').addEventListener('click', clearFilters);
+document.getElementById('btn-csv').addEventListener('click', descargarCSV);
+document.getElementById('btn-prev').addEventListener('click', () => { page--; renderTable(); });
+document.getElementById('btn-next').addEventListener('click', () => { page++; renderTable(); });
+document.getElementById('btn-refresh-hist').addEventListener('click', () => selectedId && loadHistory(selectedId));
 
 /* ── CSV ── */
 function descargarCSV() {
@@ -364,26 +381,6 @@ function descargarCSV() {
   URL.revokeObjectURL(url);
 }
 
-/* ── Eventos ── */
-let debounceTimer;
-document.getElementById('search-input').addEventListener('input', () => {
-  clearTimeout(debounceTimer); debounceTimer = setTimeout(applyFilter, 280);
-});
-document.getElementById('dep-filter').addEventListener('change', applyFilter);
-document.getElementById('btn-clear').addEventListener('click', clearFilters);
-document.getElementById('btn-csv').addEventListener('click', descargarCSV);
-document.getElementById('btn-prev').addEventListener('click', () => { page--; renderTable(); });
-document.getElementById('btn-next').addEventListener('click', () => { page++; renderTable(); });
-document.getElementById('btn-refresh-hist').addEventListener('click', () => selectedId && loadHistory(selectedId));
-
-/* ── Helpers de alerta ── */
-function showAlert(type, msg) {
-  const el = document.getElementById('form-alert');
-  el.className = `alert alert-${type} show`;
-  el.textContent = msg;
-}
-function hideAlert() { document.getElementById('form-alert').className = 'alert'; }
-
 /* ── Modal: nuevo empleado ── */
 const modalOverlay = document.getElementById('modal-overlay');
 
@@ -398,11 +395,11 @@ document.getElementById('btn-modal-close').addEventListener('click', () => { mod
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; });
 
 document.getElementById('btn-modal-guardar').addEventListener('click', async () => {
-  const nombre = document.getElementById('m-nombre').value.trim();
-  const dni    = document.getElementById('m-dni').value.trim();
-  const dep    = document.getElementById('m-dep').value.trim();
-  const region = document.getElementById('m-region').value.trim();
-  const dias   = parseInt(document.getElementById('m-dias').value);
+  const nombre  = document.getElementById('m-nombre').value.trim();
+  const dni     = document.getElementById('m-dni').value.trim();
+  const dep     = document.getElementById('m-dep').value.trim();
+  const region  = document.getElementById('m-region').value.trim();
+  const dias    = parseInt(document.getElementById('m-dias').value);
   const alertEl = document.getElementById('modal-alert');
   const showMA  = msg => { alertEl.className = 'alert alert-error show'; alertEl.textContent = msg; };
 
@@ -493,7 +490,6 @@ document.getElementById('btn-modal-pass-guardar').addEventListener('click', asyn
 });
 
 /* ══ INICIO ═════════════════════════════════════════════════════════════════ */
-// Si ya hay sesión válida, mostrar app directamente
 if (isTokenValid()) {
   showApp();
   initApp();
@@ -504,17 +500,15 @@ if (isTokenValid()) {
 } // fin if index.html
 
 /* ══ GRILLA DE VACACIONES ════════════════════════════════════════════════════ */
-// Solo ejecutar si estamos en grilla.html
 if (document.getElementById('grilla-contenido')) {
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MESES_COMPLETO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const LIMITE_MES = 10; // Noviembre = índice 10
+const LIMITE_MES = 10;
 
 let grillaAnio = new Date().getFullYear();
 let grillaData = [];
 
-/* ── Navegación ── */
 document.getElementById('btn-volver').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
@@ -532,7 +526,6 @@ document.getElementById('grilla-year-next').addEventListener('click', () => {
   cargarGrilla();
 });
 
-/* ── Auth ── */
 function grillaGetToken()    { return sessionStorage.getItem('vac_token'); }
 function grillaTokenValido() {
   const expiry = parseInt(sessionStorage.getItem('vac_expiry') || '0');
@@ -549,7 +542,6 @@ async function grillaFetch(url) {
   return res;
 }
 
-/* ── Carga de datos ── */
 async function cargarGrilla() {
   document.getElementById('grilla-loading').style.display   = 'block';
   document.getElementById('grilla-contenido').style.display = 'none';
@@ -565,7 +557,6 @@ async function cargarGrilla() {
   }
 }
 
-/* ── Semáforo ── */
 function getSemaforo(e) {
   const pct = e.dias_totales > 0 ? e.dias_programados_anio / e.dias_totales : 0;
   if (pct >= 1)   return 'green';
@@ -573,7 +564,6 @@ function getSemaforo(e) {
   return 'red';
 }
 
-/* ── Render ── */
 function renderGrilla(data) {
   const porDep = {};
   data.forEach(e => {
@@ -592,23 +582,23 @@ function renderGrilla(data) {
   contenedor.innerHTML = '';
 
   Object.keys(porDep).sort().forEach(dep => {
-    const empleados    = porDep[dep];
-    const section      = document.createElement('div');
-    section.className  = 'grilla-section';
+    const empleados     = porDep[dep];
+    const section       = document.createElement('div');
+    section.className   = 'grilla-section';
 
-    const depHeader    = document.createElement('div');
+    const depHeader     = document.createElement('div');
     depHeader.className = 'grilla-dep-header';
-    const completosDep = empleados.filter(e => getSemaforo(e) === 'green').length;
+    const completosDep  = empleados.filter(e => getSemaforo(e) === 'green').length;
     depHeader.innerHTML = `
       <span class="grilla-dep-name">${dep}</span>
       <span class="grilla-dep-stats">${completosDep}/${empleados.length} completos</span>
     `;
     section.appendChild(depHeader);
 
-    const tableWrap    = document.createElement('div');
+    const tableWrap     = document.createElement('div');
     tableWrap.className = 'grilla-table-wrap';
-    const table        = document.createElement('table');
-    table.className    = 'grilla-table';
+    const table         = document.createElement('table');
+    table.className     = 'grilla-table';
 
     const thead = document.createElement('thead');
     thead.innerHTML = `<tr>
@@ -665,7 +655,6 @@ function renderGrilla(data) {
   document.getElementById('grilla-contenido').style.display = 'block';
 }
 
-/* ── Cobertura por mes ── */
 function calcularCobertura(movimientos, anio) {
   const cobertura = {};
   movimientos.forEach(m => {
@@ -695,7 +684,6 @@ function grillaFormatDate(d) {
   } catch { return '—'; }
 }
 
-/* ── CSV ── */
 document.getElementById('btn-grilla-csv').addEventListener('click', () => {
   if (!grillaData.length) return;
   const filas = [
@@ -722,7 +710,6 @@ document.getElementById('btn-grilla-csv').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-/* ── Inicio ── */
 cargarGrilla();
 
 } // fin if grilla.html
