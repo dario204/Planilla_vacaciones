@@ -526,6 +526,7 @@ document.getElementById('grilla-year-next').addEventListener('click', () => {
   cargarGrilla();
 });
 
+/* ── Auth ── */
 function grillaGetToken()    { return sessionStorage.getItem('vac_token'); }
 function grillaTokenValido() {
   const expiry = parseInt(sessionStorage.getItem('vac_expiry') || '0');
@@ -542,6 +543,7 @@ async function grillaFetch(url) {
   return res;
 }
 
+/* ── Carga ── */
 async function cargarGrilla() {
   document.getElementById('grilla-loading').style.display   = 'block';
   document.getElementById('grilla-contenido').style.display = 'none';
@@ -549,7 +551,8 @@ async function cargarGrilla() {
   try {
     const r = await grillaFetch(`${API}/grilla?anio=${grillaAnio}`);
     grillaData = await r.json();
-    renderGrilla(grillaData);
+    poblarFiltrosDeps();
+    aplicarFiltrosGrilla();
   } catch (err) {
     if (err.message !== 'Sesión expirada')
       document.getElementById('grilla-loading').innerHTML =
@@ -557,6 +560,50 @@ async function cargarGrilla() {
   }
 }
 
+/* ── Filtros ── */
+function poblarFiltrosDeps() {
+  const sel = document.getElementById('grilla-dep-filter');
+  const actual = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  const deps = [...new Set(grillaData.map(e => e.dependencia || 'SIN ÁREA'))].sort();
+  deps.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d; o.textContent = d;
+    sel.appendChild(o);
+  });
+  sel.value = actual;
+}
+
+function aplicarFiltrosGrilla() {
+  const q   = (document.getElementById('grilla-search').value || '').trim().toUpperCase();
+  const dep = document.getElementById('grilla-dep-filter').value;
+  const sem = document.getElementById('grilla-sem-filter').value;
+
+  const filtrado = grillaData.filter(e => {
+    const matchQ   = !q   || (e.nombre_apellido || '').toUpperCase().includes(q);
+    const matchDep = !dep || (e.dependencia || 'SIN ÁREA') === dep;
+    const matchSem = !sem || getSemaforo(e) === sem;
+    return matchQ && matchDep && matchSem;
+  });
+
+  renderGrilla(filtrado);
+}
+
+let grillaDebounce;
+document.getElementById('grilla-search').addEventListener('input', () => {
+  clearTimeout(grillaDebounce);
+  grillaDebounce = setTimeout(aplicarFiltrosGrilla, 250);
+});
+document.getElementById('grilla-dep-filter').addEventListener('change', aplicarFiltrosGrilla);
+document.getElementById('grilla-sem-filter').addEventListener('change', aplicarFiltrosGrilla);
+document.getElementById('grilla-btn-clear').addEventListener('click', () => {
+  document.getElementById('grilla-search').value     = '';
+  document.getElementById('grilla-dep-filter').value = '';
+  document.getElementById('grilla-sem-filter').value = '';
+  aplicarFiltrosGrilla();
+});
+
+/* ── Semáforo ── */
 function getSemaforo(e) {
   const pct = e.dias_totales > 0 ? e.dias_programados_anio / e.dias_totales : 0;
   if (pct >= 1)   return 'green';
@@ -564,6 +611,44 @@ function getSemaforo(e) {
   return 'red';
 }
 
+/* ── Tooltip ── */
+const tooltipEl = document.getElementById('grilla-tooltip');
+
+function mostrarTooltip(ev, bloque) {
+  const fechaInicio = grillaFormatDate(bloque.fechaStr);
+  const fechaFinStr = (bloque.fechaFinStr || '').slice(0, 10);
+  const fechaFin    = fechaFinStr ? grillaFormatDate(fechaFinStr) : '—';
+
+  tooltipEl.innerHTML = `
+    <div class="grilla-tooltip-dias">${bloque.dias} día${bloque.dias !== 1 ? 's' : ''}</div>
+    <div class="grilla-tooltip-fecha">📅 Desde: ${fechaInicio}</div>
+    <div class="grilla-tooltip-vuelta">🔙 Vuelta: ${fechaFin}</div>
+    ${bloque.desc ? `<div class="grilla-tooltip-desc">"${bloque.desc}"</div>` : ''}
+  `;
+  tooltipEl.style.display = 'block';
+  posicionarTooltip(ev);
+}
+
+function posicionarTooltip(ev) {
+  const tw = tooltipEl.offsetWidth;
+  const th = tooltipEl.offsetHeight;
+  let x = ev.clientX + 14;
+  let y = ev.clientY + 14;
+  if (x + tw > window.innerWidth  - 8) x = ev.clientX - tw - 14;
+  if (y + th > window.innerHeight - 8) y = ev.clientY - th - 14;
+  tooltipEl.style.left = x + 'px';
+  tooltipEl.style.top  = y + 'px';
+}
+
+function ocultarTooltip() {
+  tooltipEl.style.display = 'none';
+}
+
+document.addEventListener('mousemove', ev => {
+  if (tooltipEl.style.display !== 'none') posicionarTooltip(ev);
+});
+
+/* ── Render ── */
 function renderGrilla(data) {
   const porDep = {};
   data.forEach(e => {
@@ -572,14 +657,21 @@ function renderGrilla(data) {
     porDep[dep].push(e);
   });
 
-  const totalEmp     = data.length;
-  const completos    = data.filter(e => getSemaforo(e) === 'green').length;
-  const sinProgramar = data.filter(e => getSemaforo(e) === 'red').length;
+  const totalEmp     = grillaData.length;
+  const completos    = grillaData.filter(e => getSemaforo(e) === 'green').length;
+  const sinProgramar = grillaData.filter(e => getSemaforo(e) === 'red').length;
   document.getElementById('grilla-resumen').textContent =
     `${completos} de ${totalEmp} completos · ${sinProgramar} sin programar`;
 
   const contenedor = document.getElementById('grilla-contenido');
   contenedor.innerHTML = '';
+
+  if (!data.length) {
+    contenedor.innerHTML = '<div class="placeholder" style="padding:3rem">Sin resultados para estos filtros</div>';
+    document.getElementById('grilla-loading').style.display   = 'none';
+    document.getElementById('grilla-contenido').style.display = 'block';
+    return;
+  }
 
   Object.keys(porDep).sort().forEach(dep => {
     const empleados     = porDep[dep];
@@ -633,10 +725,11 @@ function renderGrilla(data) {
         td.className = 'grilla-td-mes' + (mes > LIMITE_MES ? ' grilla-mes-extra' : '');
         if (cobertura[mes] && cobertura[mes].length > 0) {
           cobertura[mes].forEach(bloque => {
-            const div       = document.createElement('div');
-            div.className   = 'grilla-bloque';
-            div.title       = `${bloque.dias}d${bloque.desc ? ' — ' + bloque.desc : ''}\n${grillaFormatDate(bloque.fechaStr)}`;
+            const div     = document.createElement('div');
+            div.className = 'grilla-bloque';
             div.textContent = bloque.dias + 'd';
+            div.addEventListener('mouseenter', ev => mostrarTooltip(ev, bloque));
+            div.addEventListener('mouseleave', ocultarTooltip);
             td.appendChild(div);
           });
         }
@@ -655,10 +748,10 @@ function renderGrilla(data) {
   document.getElementById('grilla-contenido').style.display = 'block';
 }
 
+/* ── Cobertura por mes ── */
 function calcularCobertura(movimientos, anio) {
   const cobertura = {};
   movimientos.forEach(m => {
-    // Normalizar: tomar solo la parte YYYY-MM-DD por si viene con timestamp completo
     const fechaStr    = (m.fecha     || '').slice(0, 10);
     const fechaFinStr = (m.fecha_fin || '').slice(0, 10);
     const inicio = new Date(fechaStr    + 'T00:00:00Z');
@@ -669,7 +762,13 @@ function calcularCobertura(movimientos, anio) {
         const mes = cur.getUTCMonth();
         if (!cobertura[mes]) cobertura[mes] = [];
         if (!cobertura[mes].find(b => b.id === m.id))
-          cobertura[mes].push({ id: m.id, dias: m.dias, desc: m.descripcion, fechaStr: m.fecha });
+          cobertura[mes].push({
+            id: m.id,
+            dias: m.dias,
+            desc: m.descripcion,
+            fechaStr: m.fecha,
+            fechaFinStr: m.fecha_fin
+          });
       }
       cur.setUTCMonth(cur.getUTCMonth() + 1);
       cur.setUTCDate(1);
@@ -687,6 +786,7 @@ function grillaFormatDate(d) {
   } catch { return '—'; }
 }
 
+/* ── CSV ── */
 document.getElementById('btn-grilla-csv').addEventListener('click', () => {
   if (!grillaData.length) return;
   const filas = [
@@ -713,6 +813,7 @@ document.getElementById('btn-grilla-csv').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
+/* ── Inicio ── */
 cargarGrilla();
 
 } // fin if grilla.html

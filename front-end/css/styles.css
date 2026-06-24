@@ -627,21 +627,59 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 
 .btn-show-pass {
   position: absolute;
-  right: .6rem;
+  right: .5rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  padding: .2rem;
+  padding: .25rem;
   color: var(--muted);
   display: flex;
   align-items: center;
+  justify-content: center;
   border-radius: 4px;
-  transition: color .15s;
+  transition: color .15s, background .15s;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 }
-.btn-show-pass:hover { color: var(--slate); }
-.btn-show-pass svg { width: 17px; height: 17px; }
+.btn-show-pass:hover { color: var(--slate); background: var(--surface); }
+.btn-show-pass svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
+
+/* Asegurar que el wrapper del input tenga position relative */
+.pass-wrap { position: relative; }
+.pass-wrap input { padding-right: 2.75rem !important; }
+
+/* ── Tooltip de grilla ── */
+.grilla-tooltip {
+  position: fixed;
+  z-index: 300;
+  background: var(--navy);
+  color: white;
+  border-radius: 8px;
+  padding: .65rem .9rem;
+  font-size: .78rem;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  max-width: 240px;
+  line-height: 1.5;
+}
+.grilla-tooltip-dias  { font-size: 1rem; font-weight: 700; color: var(--sky); margin-bottom: .2rem; }
+.grilla-tooltip-fecha { font-size: .72rem; color: rgba(255,255,255,.6); margin-bottom: .25rem; }
+.grilla-tooltip-vuelta { font-size: .72rem; color: #86efac; }
+.grilla-tooltip-desc  { font-size: .75rem; color: rgba(255,255,255,.85); margin-top: .3rem; font-style: italic; }
+
+/* ── Filtros de grilla ── */
+.grilla-filtros {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.grilla-filtros .input-wrap { min-width: 200px; flex: 1; }
+.grilla-filtros select { min-width: 160px; }
 /* ══ GRILLA DE VACACIONES ═══════════════════════════════════════════════════ */
 
 /* ── Selector de año ── */
