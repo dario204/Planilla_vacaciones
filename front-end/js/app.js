@@ -658,8 +658,11 @@ function renderGrilla(data) {
 function calcularCobertura(movimientos, anio) {
   const cobertura = {};
   movimientos.forEach(m => {
-    const inicio = new Date(m.fecha     + 'T00:00:00Z');
-    const fin    = new Date(m.fecha_fin + 'T00:00:00Z');
+    // Normalizar: tomar solo la parte YYYY-MM-DD por si viene con timestamp completo
+    const fechaStr    = (m.fecha     || '').slice(0, 10);
+    const fechaFinStr = (m.fecha_fin || '').slice(0, 10);
+    const inicio = new Date(fechaStr    + 'T00:00:00Z');
+    const fin    = new Date(fechaFinStr + 'T00:00:00Z');
     let cur = new Date(inicio);
     while (cur <= fin) {
       if (cur.getUTCFullYear() === anio) {
@@ -678,7 +681,7 @@ function calcularCobertura(movimientos, anio) {
 function grillaFormatDate(d) {
   if (!d) return '—';
   try {
-    const fecha = new Date(d);
+    const fecha = new Date(d.slice(0, 10) + 'T00:00:00Z');
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone:'UTC' });
   } catch { return '—'; }
