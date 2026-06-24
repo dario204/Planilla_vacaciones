@@ -340,6 +340,61 @@ app.get('/api/dependencias', async (req, res) => {
   }
 });
 
+// ── GET grilla de vacaciones por año ─────────────────────────────────────────
+// Devuelve empleados con sus movimientos del año solicitado,
+// calculando fecha_fin = fecha + dias - 1
+app.get('/api/grilla', async (req, res) => {
+  const anio = parseInt(req.query.anio, 10);
+  if (!Number.isFinite(anio) || anio < 2020 || anio > 2100)
+    return res.status(400).json({ error: 'Año inválido' });
+
+  try {
+    // Todos los empleados
+    const { rows: empleados } = await pool.query(
+      `SELECT id, region, dependencia, nombre_apellido, dni,
+              dias_totales, dias_tomados,
+              (dias_totales - dias_tomados) AS saldo_disponible
+       FROM empleados
+       ORDER BY dependencia, nombre_apellido`
+    );
+
+    // Movimientos del año solicitado (con fecha_fin calculada)
+    const { rows: movimientos } = await pool.query(
+      `SELECT m.id, m.empleado_id, m.dias, m.descripcion, m.fecha,
+              (m.fecha + (m.dias - 1) * INTERVAL '1 day')::date AS fecha_fin
+       FROM movimientos m
+       WHERE EXTRACT(YEAR FROM m.fecha) = $1
+          OR EXTRACT(YEAR FROM m.fecha + (m.dias - 1) * INTERVAL '1 day') = $1
+       ORDER BY m.fecha`,
+      [anio]
+    );
+
+    // Agrupar movimientos por empleado_id
+    const movPorEmpleado = {};
+    movimientos.forEach(m => {
+      if (!movPorEmpleado[m.empleado_id]) movPorEmpleado[m.empleado_id] = [];
+      movPorEmpleado[m.empleado_id].push(m);
+    });
+
+    // Calcular días programados en el año para cada empleado
+    const resultado = empleados.map(e => {
+      const movs = movPorEmpleado[e.id] || [];
+      // Días programados en el año: sumar días de movimientos del año
+      const diasProgramados = movs.reduce((acc, m) => acc + m.dias, 0);
+      return {
+        ...e,
+        movimientos: movs,
+        dias_programados_anio: diasProgramados
+      };
+    });
+
+    res.json(resultado);
+  } catch (err) {
+    console.error('Error GET /grilla:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // ── GET estadísticas ─────────────────────────────────────────────────────────
 app.get('/api/stats', async (req, res) => {
   try {

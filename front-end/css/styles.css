@@ -485,7 +485,146 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   transition: all .15s;
 }
 .btn-logout:hover { background: rgba(255,255,255,.15); color: white; }
-/* ── Botón mostrar/ocultar contraseña ── */
+
+/* ══ GRILLA DE VACACIONES ═══════════════════════════════════════════════════ */
+
+/* Selector de año en el header */
+.grilla-year-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: white;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  line-height: 1;
+}
+.grilla-year-btn:hover { background: rgba(255,255,255,.2); }
+.grilla-year-label {
+  color: white;
+  font-size: .95rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* Leyenda */
+.grilla-legend {
+  display: inline-block;
+  width: 28px; height: 10px;
+  border-radius: 3px;
+  background: var(--sky);
+  vertical-align: middle;
+  margin-right: .25rem;
+}
+
+/* Semáforos */
+.semaforo {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.semaforo-green { background: var(--green); }
+.semaforo-amber { background: var(--amber); }
+.semaforo-red   { background: var(--red); }
+
+/* Sección por dependencia */
+.grilla-section { margin-bottom: 1.75rem; }
+
+.grilla-dep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem .75rem;
+  background: var(--navy);
+  color: white;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size: .8rem;
+}
+.grilla-dep-name  { font-weight: 700; letter-spacing: .03em; }
+.grilla-dep-stats { font-size: .72rem; color: rgba(255,255,255,.6); font-family: 'DM Mono', monospace; }
+
+/* Tabla de grilla */
+.grilla-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); }
+
+.grilla-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+  min-width: 900px;
+}
+
+.grilla-table thead th {
+  background: var(--surface);
+  padding: .5rem .6rem;
+  text-align: center;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--slate);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.grilla-th-name { text-align: left !important; min-width: 200px; padding-left: .75rem !important; }
+.grilla-th-stat { min-width: 60px; }
+.grilla-th-mes  { min-width: 52px; }
+.grilla-mes-extra { opacity: .5; } /* Diciembre atenuado */
+
+.grilla-row {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.grilla-row:last-child { border-bottom: none; }
+.grilla-row:hover { background: var(--sky-pale); }
+
+.grilla-td-name {
+  padding: .45rem .75rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 38px;
+}
+.grilla-emp-name { font-weight: 500; color: var(--navy); font-size: .78rem; }
+
+.grilla-td-stat {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: .75rem;
+  color: var(--slate);
+  padding: .45rem .4rem;
+  white-space: nowrap;
+}
+
+.grilla-td-mes {
+  padding: .3rem .25rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Bloque de vacaciones dentro de la celda */
+.grilla-bloque {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sky);
+  color: white;
+  border-radius: 4px;
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  padding: .15rem .35rem;
+  margin: .1rem;
+  cursor: default;
+  white-space: nowrap;
+  transition: background .12s;
+}
+.grilla-bloque:hover { background: var(--sky-dark); }
+
 .btn-show-pass {
   position: absolute;
   right: .6rem;
@@ -503,3 +642,144 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 }
 .btn-show-pass:hover { color: var(--slate); }
 .btn-show-pass svg { width: 17px; height: 17px; }
+/* ══ GRILLA DE VACACIONES ═══════════════════════════════════════════════════ */
+
+/* ── Selector de año ── */
+.grilla-year-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: white;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  line-height: 1;
+}
+.grilla-year-btn:hover { background: rgba(255,255,255,.2); }
+.grilla-year-label {
+  color: white;
+  font-size: .95rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* ── Leyenda ── */
+.grilla-legend {
+  display: inline-block;
+  width: 28px; height: 10px;
+  border-radius: 3px;
+  background: var(--sky);
+  vertical-align: middle;
+  margin-right: .25rem;
+}
+
+/* ── Semáforos ── */
+.semaforo {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.semaforo-green { background: var(--green); }
+.semaforo-amber { background: var(--amber); }
+.semaforo-red   { background: var(--red); }
+
+/* ── Sección por dependencia ── */
+.grilla-section { margin-bottom: 1.75rem; }
+
+.grilla-dep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .5rem .75rem;
+  background: var(--navy);
+  color: white;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size: .8rem;
+}
+.grilla-dep-name  { font-weight: 700; letter-spacing: .03em; }
+.grilla-dep-stats { font-size: .72rem; color: rgba(255,255,255,.6); font-family: 'DM Mono', monospace; }
+
+/* ── Tabla ── */
+.grilla-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.grilla-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+  min-width: 900px;
+}
+.grilla-table thead th {
+  background: var(--surface);
+  padding: .5rem .6rem;
+  text-align: center;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--slate);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.grilla-th-name { text-align: left !important; min-width: 200px; padding-left: .75rem !important; }
+.grilla-th-stat { min-width: 60px; }
+.grilla-th-mes  { min-width: 52px; }
+.grilla-mes-extra { opacity: .5; }
+
+.grilla-row {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.grilla-row:last-child { border-bottom: none; }
+.grilla-row:hover { background: var(--sky-pale); }
+
+.grilla-td-name {
+  padding: .45rem .75rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 38px;
+}
+.grilla-emp-name { font-weight: 500; color: var(--navy); font-size: .78rem; }
+
+.grilla-td-stat {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: .75rem;
+  color: var(--slate);
+  padding: .45rem .4rem;
+  white-space: nowrap;
+}
+
+.grilla-td-mes {
+  padding: .3rem .25rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* ── Bloque de vacaciones ── */
+.grilla-bloque {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sky);
+  color: white;
+  border-radius: 4px;
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  padding: .15rem .35rem;
+  margin: .1rem;
+  cursor: default;
+  white-space: nowrap;
+  transition: background .12s;
+}
+.grilla-bloque:hover { background: var(--sky-dark); }

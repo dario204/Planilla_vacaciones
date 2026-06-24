@@ -487,6 +487,7 @@ document.getElementById('btn-modal-pass-guardar').addEventListener('click', asyn
   }
 });
 
+
 /* ══ INICIO ═════════════════════════════════════════════════════════════════ */
 // Si ya hay sesión válida, mostrar app directamente
 if (isTokenValid()) {
@@ -495,3 +496,223 @@ if (isTokenValid()) {
 } else {
   showLogin();
 }
+
+/* ══ GRILLA DE VACACIONES ════════════════════════════════════════════════════ */
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_COMPLETO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const LIMITE_MES = 10; // Noviembre = índice 10
+
+let grillaAnio = new Date().getFullYear();
+let grillaData = [];
+
+/* ── Navegación ── */
+document.getElementById('btn-volver').addEventListener('click', () => {
+  window.location.href = 'index.html';
+});
+
+document.getElementById('grilla-year-label').textContent = grillaAnio;
+
+document.getElementById('grilla-year-prev').addEventListener('click', () => {
+  grillaAnio--;
+  document.getElementById('grilla-year-label').textContent = grillaAnio;
+  cargarGrilla();
+});
+document.getElementById('grilla-year-next').addEventListener('click', () => {
+  grillaAnio++;
+  document.getElementById('grilla-year-label').textContent = grillaAnio;
+  cargarGrilla();
+});
+
+/* ── Auth ── */
+function grillaGetToken()    { return sessionStorage.getItem('vac_token'); }
+function grillaTokenValido() {
+  const expiry = parseInt(sessionStorage.getItem('vac_expiry') || '0');
+  return grillaGetToken() && Date.now() < expiry;
+}
+if (!grillaTokenValido()) { window.location.href = 'index.html'; }
+
+async function grillaFetch(url) {
+  const token = grillaGetToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(url, { headers });
+  if (res.status === 401) { window.location.href = 'index.html'; throw new Error('Sesión expirada'); }
+  return res;
+}
+
+/* ── Carga de datos ── */
+async function cargarGrilla() {
+  document.getElementById('grilla-loading').style.display   = 'block';
+  document.getElementById('grilla-contenido').style.display = 'none';
+  document.getElementById('grilla-contenido').innerHTML     = '';
+  try {
+    const r = await grillaFetch(`${API}/grilla?anio=${grillaAnio}`);
+    grillaData = await r.json();
+    renderGrilla(grillaData);
+  } catch (err) {
+    if (err.message !== 'Sesión expirada')
+      document.getElementById('grilla-loading').innerHTML =
+        '<p style="color:var(--red);text-align:center;padding:2rem">⚠️ Error al cargar la grilla.</p>';
+  }
+}
+
+/* ── Semáforo ── */
+function getSemaforo(e) {
+  const pct = e.dias_totales > 0 ? e.dias_programados_anio / e.dias_totales : 0;
+  if (pct >= 1)   return 'green';
+  if (pct >= 0.5) return 'amber';
+  return 'red';
+}
+
+/* ── Render ── */
+function renderGrilla(data) {
+  const porDep = {};
+  data.forEach(e => {
+    const dep = e.dependencia || 'SIN ÁREA';
+    if (!porDep[dep]) porDep[dep] = [];
+    porDep[dep].push(e);
+  });
+
+  const totalEmp     = data.length;
+  const completos    = data.filter(e => getSemaforo(e) === 'green').length;
+  const sinProgramar = data.filter(e => getSemaforo(e) === 'red').length;
+  document.getElementById('grilla-resumen').textContent =
+    `${completos} de ${totalEmp} completos · ${sinProgramar} sin programar`;
+
+  const contenedor = document.getElementById('grilla-contenido');
+  contenedor.innerHTML = '';
+
+  Object.keys(porDep).sort().forEach(dep => {
+    const empleados    = porDep[dep];
+    const section      = document.createElement('div');
+    section.className  = 'grilla-section';
+
+    const depHeader    = document.createElement('div');
+    depHeader.className = 'grilla-dep-header';
+    const completosDep = empleados.filter(e => getSemaforo(e) === 'green').length;
+    depHeader.innerHTML = `
+      <span class="grilla-dep-name">${dep}</span>
+      <span class="grilla-dep-stats">${completosDep}/${empleados.length} completos</span>
+    `;
+    section.appendChild(depHeader);
+
+    const tableWrap    = document.createElement('div');
+    tableWrap.className = 'grilla-table-wrap';
+    const table        = document.createElement('table');
+    table.className    = 'grilla-table';
+
+    const thead = document.createElement('thead');
+    thead.innerHTML = `<tr>
+      <th class="grilla-th-name">Empleado</th>
+      <th class="grilla-th-stat">Días</th>
+      ${MESES.map((m, i) => `<th class="grilla-th-mes${i > LIMITE_MES ? ' grilla-mes-extra' : ''}">${m}</th>`).join('')}
+    </tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    empleados.forEach(e => {
+      const sem = getSemaforo(e);
+      const tr  = document.createElement('tr');
+      tr.className = 'grilla-row';
+
+      const tdNombre = document.createElement('td');
+      tdNombre.className = 'grilla-td-name';
+      tdNombre.innerHTML = `
+        <span class="semaforo semaforo-${sem}" title="${e.dias_programados_anio}/${e.dias_totales} días"></span>
+        <span class="grilla-emp-name">${e.nombre_apellido}</span>
+      `;
+      tr.appendChild(tdNombre);
+
+      const tdDias = document.createElement('td');
+      tdDias.className   = 'grilla-td-stat';
+      tdDias.textContent = `${e.dias_programados_anio}/${e.dias_totales}`;
+      tr.appendChild(tdDias);
+
+      const cobertura = calcularCobertura(e.movimientos, grillaAnio);
+      for (let mes = 0; mes < 12; mes++) {
+        const td = document.createElement('td');
+        td.className = 'grilla-td-mes' + (mes > LIMITE_MES ? ' grilla-mes-extra' : '');
+        if (cobertura[mes] && cobertura[mes].length > 0) {
+          cobertura[mes].forEach(bloque => {
+            const div       = document.createElement('div');
+            div.className   = 'grilla-bloque';
+            div.title       = `${bloque.dias}d${bloque.desc ? ' — ' + bloque.desc : ''}\n${grillaFormatDate(bloque.fechaStr)}`;
+            div.textContent = bloque.dias + 'd';
+            td.appendChild(div);
+          });
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    section.appendChild(tableWrap);
+    contenedor.appendChild(section);
+  });
+
+  document.getElementById('grilla-loading').style.display   = 'none';
+  document.getElementById('grilla-contenido').style.display = 'block';
+}
+
+/* ── Cobertura por mes ── */
+function calcularCobertura(movimientos, anio) {
+  const cobertura = {};
+  movimientos.forEach(m => {
+    const inicio = new Date(m.fecha     + 'T00:00:00Z');
+    const fin    = new Date(m.fecha_fin + 'T00:00:00Z');
+    let cur = new Date(inicio);
+    while (cur <= fin) {
+      if (cur.getUTCFullYear() === anio) {
+        const mes = cur.getUTCMonth();
+        if (!cobertura[mes]) cobertura[mes] = [];
+        if (!cobertura[mes].find(b => b.id === m.id))
+          cobertura[mes].push({ id: m.id, dias: m.dias, desc: m.descripcion, fechaStr: m.fecha });
+      }
+      cur.setUTCMonth(cur.getUTCMonth() + 1);
+      cur.setUTCDate(1);
+    }
+  });
+  return cobertura;
+}
+
+function grillaFormatDate(d) {
+  if (!d) return '—';
+  try {
+    const fecha = new Date(d);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', timeZone:'UTC' });
+  } catch { return '—'; }
+}
+
+/* ── CSV ── */
+document.getElementById('btn-grilla-csv').addEventListener('click', () => {
+  if (!grillaData.length) return;
+  const filas = [
+    ['Dependencia','Apellido y Nombre','DNI','Días Totales','Días Programados', ...MESES_COMPLETO]
+  ];
+  grillaData.forEach(e => {
+    const cobertura = calcularCobertura(e.movimientos, grillaAnio);
+    filas.push([
+      e.dependencia || '',
+      e.nombre_apellido,
+      e.dni,
+      e.dias_totales,
+      e.dias_programados_anio,
+      ...MESES_COMPLETO.map((_, i) => cobertura[i] ? cobertura[i].map(b => b.dias + 'd').join('+') : '')
+    ]);
+  });
+  const csv  = filas.map(f => f.map(c => `"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `grilla_vacaciones_${grillaAnio}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── Inicio ── */
+cargarGrilla();
