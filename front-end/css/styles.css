@@ -467,14 +467,19 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   #grilla-btn-clear { align-self: flex-start; }
 
   /* ── Login ── */
-  .login-side  { display: none; }
+  .login-side    { display: none; }
+  .login-screen  { background: var(--surface); }
   .login-panel {
-    width: 100%; max-width: 100%;
+    width: 100%;
+    max-width: 100%;
     min-height: 100vh;
-    padding: 2rem 1.25rem;
+    padding: 3rem 1.5rem 2rem;
     justify-content: center;
+    align-items: stretch;
   }
-  .login-panel-title { font-size: 1.2rem; }
+  .login-panel-title  { font-size: 1.3rem; }
+  .login-panel-sub    { margin-bottom: 1.5rem; }
+  .login-form         { width: 100%; }
 }
 
 /* ── Login screen ── */
@@ -567,12 +572,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .login-form { width: 100%; }
 .login-card .form-field { text-align: left; }
 
-/* Responsive: en pantallas chicas ocultar el panel lateral */
-@media (max-width: 700px) {
-  .login-screen { align-items: center; justify-content: center; }
-  .login-side   { display: none; }
-  .login-panel  { width: 100%; max-width: 400px; min-height: 100vh; justify-content: center; }
-}
+/* Responsive login: el bloque @media(640px) de arriba maneja el móvil */
 
 /* ── Logout button ── */
 .btn-logout {
