@@ -363,124 +363,9 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .req { color: var(--red); }
 
-/* ══ RESPONSIVE ═════════════════════════════════════════════════════════════ */
+/* [RESPONSIVE MOVIDO AL FINAL] */
 
-/* Tablet (≤900px) */
-@media (max-width: 900px) {
-  .main-grid { grid-template-columns: 1fr; }
-  .header-date { display: none; }
-  .grilla-filtros { flex-direction: column; align-items: stretch; }
-  .grilla-filtros .input-wrap,
-  .grilla-filtros select { min-width: 0; width: 100%; }
-}
 
-/* Móvil (≤640px) */
-@media (max-width: 640px) {
-  /* ── Página general ── */
-  .app { padding: .75rem; }
-
-  /* ── Header: una sola fila, sin texto en botones ── */
-  header {
-    height: auto;
-    min-height: 52px;
-    padding: .5rem .75rem;
-    gap: .5rem;
-  }
-  .header-sub  { display: none; }
-  .header-date { display: none; }
-  .header-title { font-size: .82rem; }
-  .header-logo  { width: 30px; height: 30px; }
-  .header-logo svg { width: 16px; height: 16px; }
-  .header-actions { gap: .4rem; }
-
-  /* Botones del header: solo ícono */
-  .btn-logout {
-    padding: .35rem .45rem;
-    font-size: .72rem;
-    gap: 0;
-    min-width: 34px;
-    justify-content: center;
-  }
-  .btn-logout span { display: none; }
-  .btn-logout svg  { width: 15px !important; height: 15px !important; }
-
-  /* ── Panel de empleados ── */
-  .panel-header { padding: .75rem 1rem; flex-wrap: wrap; gap: .4rem; }
-  .panel-body   { padding: .75rem 1rem; }
-
-  /* Ocultar count de empleados para que los botones entren */
-  #table-count { display: none; }
-
-  /* ── Search / filtros ── */
-  .search-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: .5rem;
-  }
-  .search-row select { max-width: 100% !important; }
-
-  /* ── Tabla ── */
-  table      { font-size: .75rem; }
-  thead th   { padding: .4rem .5rem; font-size: .63rem; }
-  tbody td   { padding: .45rem .5rem; }
-  .td-dep    { font-size: .63rem; padding: .1rem .3rem; }
-  .td-num    { font-size: .75rem; }
-
-  /* Ocultar columna "Tomados" en móvil (poco espacio) */
-  thead th:nth-child(4),
-  tbody td:nth-child(4) { display: none; }
-
-  /* ── Paginación ── */
-  .pagination { flex-direction: column; gap: .4rem; align-items: flex-start; }
-  .pagination span { font-size: .72rem; }
-
-  /* ── Card del empleado ── */
-  .emp-card { padding: 1rem; }
-  .emp-card-name { font-size: .92rem; }
-  .emp-bar-val   { font-size: 1.3rem; }
-  .emp-bar-lbl   { font-size: .6rem; }
-
-  /* ── Formulario ── */
-  .form-row-2     { grid-template-columns: 1fr; }
-  .form-field     { margin-bottom: .65rem; }
-  .form-label     { font-size: .72rem; }
-  input[type="text"], input[type="number"], input[type="date"], select, textarea {
-    font-size: .82rem;
-    padding: .55rem .7rem;
-  }
-
-  /* ── Modal ── */
-  .modal-overlay { padding: .5rem; align-items: flex-end; }
-  .modal         { border-radius: var(--radius) var(--radius) 0 0; max-width: 100%; }
-  .modal-header  { padding: 1rem; }
-  .modal-body    { padding: 1rem; }
-
-  /* ── Historial ── */
-  .history-item { flex-wrap: wrap; gap: .35rem; }
-  .history-days { font-size: .8rem; }
-
-  /* ── Badge ── */
-  .badge { font-size: .68rem; padding: .12rem .4rem; }
-
-  /* ── Grilla: filtros ── */
-  .grilla-filtros { gap: .4rem; }
-  #grilla-btn-clear { align-self: flex-start; }
-
-  /* ── Login ── */
-  .login-side    { display: none; }
-  .login-screen  { background: var(--surface); }
-  .login-panel {
-    width: 100%;
-    max-width: 100%;
-    min-height: 100vh;
-    padding: 3rem 1.5rem 2rem;
-    justify-content: center;
-    align-items: stretch;
-  }
-  .login-panel-title  { font-size: 1.3rem; }
-  .login-panel-sub    { margin-bottom: 1.5rem; }
-  .login-form         { width: 100%; }
-}
 
 /* ── Login screen ── */
 .login-screen {
@@ -927,3 +812,122 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   transition: background .12s;
 }
 .grilla-bloque:hover { background: var(--sky-dark); }
+
+/* ══ RESPONSIVE ═════════════════════════════════════════════════════════════ */
+
+/* Tablet (≤900px) */
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .header-date { display: none; }
+  .grilla-filtros { flex-direction: column; align-items: stretch; }
+  .grilla-filtros .input-wrap,
+  .grilla-filtros select { min-width: 0; width: 100%; }
+}
+
+/* Móvil (≤640px) */
+@media (max-width: 640px) {
+  /* ── Página general ── */
+  .app { padding: .75rem; }
+
+  /* ── Header: una sola fila, sin texto en botones ── */
+  header {
+    height: auto;
+    min-height: 52px;
+    padding: .5rem .75rem;
+    gap: .5rem;
+  }
+  .header-sub  { display: none; }
+  .header-date { display: none; }
+  .header-title { font-size: .82rem; }
+  .header-logo  { width: 30px; height: 30px; }
+  .header-logo svg { width: 16px; height: 16px; }
+  .header-actions { gap: .4rem; }
+
+  /* Botones del header: solo ícono */
+  .btn-logout {
+    padding: .35rem .45rem;
+    font-size: .72rem;
+    gap: 0;
+    min-width: 34px;
+    justify-content: center;
+  }
+  .btn-logout span { display: none; }
+  .btn-logout svg  { width: 15px !important; height: 15px !important; }
+
+  /* ── Panel de empleados ── */
+  .panel-header { padding: .75rem 1rem; flex-wrap: wrap; gap: .4rem; }
+  .panel-body   { padding: .75rem 1rem; }
+
+  /* Ocultar count de empleados para que los botones entren */
+  #table-count { display: none; }
+
+  /* ── Search / filtros ── */
+  .search-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .5rem;
+  }
+  .search-row select { max-width: 100% !important; }
+
+  /* ── Tabla ── */
+  table      { font-size: .75rem; }
+  thead th   { padding: .4rem .5rem; font-size: .63rem; }
+  tbody td   { padding: .45rem .5rem; }
+  .td-dep    { font-size: .63rem; padding: .1rem .3rem; }
+  .td-num    { font-size: .75rem; }
+
+  /* Ocultar columna "Tomados" en móvil (poco espacio) */
+  thead th:nth-child(4),
+  tbody td:nth-child(4) { display: none; }
+
+  /* ── Paginación ── */
+  .pagination { flex-direction: column; gap: .4rem; align-items: flex-start; }
+  .pagination span { font-size: .72rem; }
+
+  /* ── Card del empleado ── */
+  .emp-card { padding: 1rem; }
+  .emp-card-name { font-size: .92rem; }
+  .emp-bar-val   { font-size: 1.3rem; }
+  .emp-bar-lbl   { font-size: .6rem; }
+
+  /* ── Formulario ── */
+  .form-row-2     { grid-template-columns: 1fr; }
+  .form-field     { margin-bottom: .65rem; }
+  .form-label     { font-size: .72rem; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    font-size: .82rem;
+    padding: .55rem .7rem;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay { padding: .5rem; align-items: flex-end; }
+  .modal         { border-radius: var(--radius) var(--radius) 0 0; max-width: 100%; }
+  .modal-header  { padding: 1rem; }
+  .modal-body    { padding: 1rem; }
+
+  /* ── Historial ── */
+  .history-item { flex-wrap: wrap; gap: .35rem; }
+  .history-days { font-size: .8rem; }
+
+  /* ── Badge ── */
+  .badge { font-size: .68rem; padding: .12rem .4rem; }
+
+  /* ── Grilla: filtros ── */
+  .grilla-filtros { gap: .4rem; }
+  #grilla-btn-clear { align-self: flex-start; }
+
+  /* ── Login ── */
+  .login-side    { display: none; }
+  .login-screen  { background: var(--surface); }
+  .login-panel {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    padding: 3rem 1.5rem 2rem;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .login-panel-title  { font-size: 1.3rem; }
+  .login-panel-sub    { margin-bottom: 1.5rem; }
+  .login-form         { width: 100%; }
+}
