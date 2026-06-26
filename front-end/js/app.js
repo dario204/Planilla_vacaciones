@@ -1,3 +1,11 @@
+function togglePass(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.querySelector('.eye-off').style.display = isHidden ? 'none' : '';
+  btn.querySelector('.eye-on').style.display  = isHidden ? '' : 'none';
+}
+
 const API = 'https://planilla-vacaciones.onrender.com/api';
 const PAGE_SIZE = 15;
 const TOKEN_KEY = 'vac_token';

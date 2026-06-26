@@ -16,40 +16,40 @@
       <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 110-16 8 8 0 010 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
     </div>
     <div>
-      <div class="header-title">Grilla de Vacaciones</div>
-      <div class="header-sub">EANA — Región Córdoba</div>
+      <h1 class="header-title">Grilla de Vacaciones</h1>
+      <p class="header-sub">EANA — Región Córdoba</p>
     </div>
   </div>
   <div class="header-actions">
-    <div style="display:flex;align-items:center;gap:.5rem">
+    <div class="grilla-year-controls">
       <button class="grilla-year-btn" id="grilla-year-prev" title="Año anterior">‹</button>
       <span class="grilla-year-label" id="grilla-year-label">2026</span>
       <button class="grilla-year-btn" id="grilla-year-next" title="Año siguiente">›</button>
     </div>
     <button class="btn-logout" id="btn-grilla-csv" title="Exportar a CSV">
-      <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span>CSV</span>
     </button>
     <button class="btn-logout" id="btn-volver" title="Volver al sistema">
-      <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
       <span>Volver</span>
     </button>
   </div>
 </header>
 
-<div class="app" style="padding-top:1.5rem">
+<main class="app app-grilla">
 
   <!-- Leyenda + resumen -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.75rem">
-    <div style="display:flex;align-items:center;gap:1.25rem;font-size:.78rem;color:var(--slate)">
+  <div class="grilla-header-bar">
+    <div class="grilla-legend-group">
       <span><span class="grilla-legend"></span> Días programados</span>
-      <span style="display:flex;align-items:center;gap:.5rem">
+      <span class="grilla-semaforo-group">
         <span class="semaforo semaforo-green"></span> Completo &nbsp;
         <span class="semaforo semaforo-amber"></span> Parcial &nbsp;
         <span class="semaforo semaforo-red"></span> Sin programar
       </span>
     </div>
-    <div id="grilla-resumen" style="font-size:.78rem;color:var(--muted)"></div>
+    <p id="grilla-resumen"></p>
   </div>
 
   <!-- Filtros -->
@@ -68,21 +68,21 @@
       <option value="red">Sin programar</option>
     </select>
     <button class="btn btn-ghost btn-clear" id="grilla-btn-clear">
-      <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
       Limpiar
     </button>
   </div>
 
   <div id="grilla-loading">
-    <div class="skeleton" style="height:38px;margin-bottom:.5rem;border-radius:6px"></div>
-    <div class="skeleton" style="height:38px;margin-bottom:.5rem;border-radius:6px"></div>
-    <div class="skeleton" style="height:38px;margin-bottom:.5rem;border-radius:6px"></div>
-    <div class="skeleton" style="height:38px;border-radius:6px"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
   </div>
 
   <div id="grilla-contenido" style="display:none"></div>
 
-</div>
+</main>
 
 <!-- Tooltip flotante -->
 <div id="grilla-tooltip" class="grilla-tooltip" style="display:none"></div>

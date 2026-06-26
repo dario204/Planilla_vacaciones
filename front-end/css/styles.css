@@ -55,6 +55,7 @@ header {
 
 /* ── Layout ── */
 .app { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+.app-grilla { padding-top: 1.5rem; }
 
 .main-grid {
   display: grid;
@@ -71,6 +72,7 @@ header {
   box-shadow: var(--shadow);
   overflow: hidden;
 }
+.panel-mb { margin-bottom: 1.5rem; }
 .panel-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border);
@@ -78,10 +80,13 @@ header {
   align-items: center;
   justify-content: space-between;
 }
+.panel-header-tools { display: flex; align-items: center; gap: .6rem; }
 .panel-title { font-size: .9rem; font-weight: 700; color: var(--navy); }
 .panel-body  { padding: 1.5rem; }
+.panel-body-history { padding: .5rem 1.5rem; }
 
-/* ── Search row ── */
+/* ── Search section ── */
+.search-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
 .search-row { display: flex; gap: .6rem; margin-bottom: 1rem; align-items: center; }
 .input-wrap { position: relative; flex: 1; }
 .input-wrap svg {
@@ -106,7 +111,11 @@ input[type="date"]:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px rgba(14,165,233,.15);
 }
 .input-wrap input { padding-left: 2.25rem; }
+.input-wrap input[type="password"] { padding-right: 2.5rem; }
 select { cursor: pointer; }
+
+#dep-filter { flex: 1; max-width: 180px; }
+#table-count { font-size: .78rem; color: var(--muted); }
 
 /* ── Table ── */
 .table-wrap { overflow-x: auto; }
@@ -123,6 +132,7 @@ thead th {
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
+.th-right { text-align: right; }
 tbody tr {
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -163,6 +173,20 @@ tbody tr:hover .btn-delete-row,
 tbody tr.selected .btn-delete-row { opacity: 1; }
 .btn-delete-row:hover { color: var(--red); background: #fee2e2; }
 
+/* ── Skeleton ── */
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.skeleton-row { height: 36px; margin: .5rem 1rem; }
+
+#grilla-loading .skeleton { height: 38px; border-radius: 6px; margin-bottom: .5rem; }
+#grilla-loading .skeleton:last-child { margin-bottom: 0; }
+
 /* ── Badge ── */
 .badge {
   display: inline-flex;
@@ -197,6 +221,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .emp-bar-lbl   { font-size: .65rem; text-transform: uppercase; letter-spacing: .05em; color: rgba(255,255,255,.55); margin-top: .2rem; }
 .progress-track { background: rgba(255,255,255,.15); border-radius: 999px; height: 6px; margin-top: .9rem; overflow: hidden; }
 .progress-fill  { background: var(--sky); height: 100%; border-radius: 999px; transition: width .5s ease; }
+#card-saldo { color: var(--sky); }
 
 /* ── Buttons ── */
 .btn {
@@ -214,7 +239,9 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   font-family: 'Inter', sans-serif;
   white-space: nowrap;
 }
+.btn svg { width: 14px; height: 14px; }
 .btn-primary { background: var(--sky); color: white; width: 100%; }
+.btn-primary svg { width: 16px; height: 16px; }
 .btn-primary:hover:not(:disabled) { background: var(--sky-dark); }
 .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 .btn-ghost {
@@ -255,6 +282,23 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   color: var(--muted);
 }
 .btn-clear:hover { color: var(--red); border-color: #fecaca; background: #fff5f5; }
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem .9rem;
+  border-radius: 7px;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.8);
+  font-family: 'Inter', sans-serif;
+  transition: all .15s;
+}
+.btn-logout svg { width: 15px; height: 15px; }
+.btn-logout:hover { background: rgba(255,255,255,.15); color: white; }
 
 /* ── Alert ── */
 .alert {
@@ -289,15 +333,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .placeholder { text-align: center; padding: 2.5rem 1.5rem; color: var(--muted); }
 .placeholder-icon { font-size: 2.5rem; margin-bottom: .75rem; }
 .placeholder-text { font-size: .875rem; }
-
-/* ── Skeleton ── */
-.skeleton {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 4px;
-}
-@keyframes shimmer { to { background-position: -200% 0; } }
 
 /* ── Pagination ── */
 .pagination {
@@ -342,6 +377,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   overflow: hidden;
   animation: modal-in .18s ease;
 }
+.modal-sm { max-width: 400px; }
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(-12px) scale(.97); }
   to   { opacity: 1; transform: none; }
@@ -363,9 +399,30 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .req { color: var(--red); }
 
-/* [RESPONSIVE MOVIDO AL FINAL] */
-
-
+/* ── Password toggle button ── */
+.btn-show-pass {
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: .25rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.btn-show-pass:hover { color: var(--slate); background: var(--surface); }
+.btn-show-pass svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
+.pass-wrap { position: relative; }
+.pass-wrap input { padding-right: 2.75rem !important; }
 
 /* ── Login screen ── */
 .login-screen {
@@ -374,8 +431,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   align-items: stretch;
   background: var(--navy);
 }
-
-/* Panel izquierdo decorativo */
 .login-side {
   flex: 1;
   background: linear-gradient(145deg, var(--navy) 0%, #0a3060 50%, #0e4080 100%);
@@ -430,8 +485,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 }
 .login-side-headline em { color: var(--sky); font-style: normal; }
 .login-side-desc { font-size: .875rem; color: rgba(255,255,255,.5); max-width: 280px; line-height: 1.6; }
-
-/* Panel derecho con el form */
 .login-panel {
   width: 420px;
   background: var(--surface);
@@ -457,223 +510,10 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .login-form { width: 100%; }
 .login-card .form-field { text-align: left; }
 
-/* Responsive login: el bloque @media(640px) de arriba maneja el móvil */
-
-/* ── Logout button ── */
-.btn-logout {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .4rem .9rem;
-  border-radius: 7px;
-  font-size: .78rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid rgba(255,255,255,.2);
-  background: rgba(255,255,255,.08);
-  color: rgba(255,255,255,.8);
-  font-family: 'Inter', sans-serif;
-  transition: all .15s;
-}
-.btn-logout:hover { background: rgba(255,255,255,.15); color: white; }
-
-/* ══ GRILLA DE VACACIONES ═══════════════════════════════════════════════════ */
-
-/* Selector de año en el header */
-.grilla-year-btn {
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.2);
-  color: white;
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s;
-  line-height: 1;
-}
-.grilla-year-btn:hover { background: rgba(255,255,255,.2); }
-.grilla-year-label {
-  color: white;
-  font-size: .95rem;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
-  min-width: 48px;
-  text-align: center;
-}
-
-/* Leyenda */
-.grilla-legend {
-  display: inline-block;
-  width: 28px; height: 10px;
-  border-radius: 3px;
-  background: var(--sky);
-  vertical-align: middle;
-  margin-right: .25rem;
-}
-
-/* Semáforos */
-.semaforo {
-  display: inline-block;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.semaforo-green { background: var(--green); }
-.semaforo-amber { background: var(--amber); }
-.semaforo-red   { background: var(--red); }
-
-/* Sección por dependencia */
-.grilla-section { margin-bottom: 1.75rem; }
-
-.grilla-dep-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: .5rem .75rem;
-  background: var(--navy);
-  color: white;
-  border-radius: var(--radius) var(--radius) 0 0;
-  font-size: .8rem;
-}
-.grilla-dep-name  { font-weight: 700; letter-spacing: .03em; }
-.grilla-dep-stats { font-size: .72rem; color: rgba(255,255,255,.6); font-family: 'DM Mono', monospace; }
-
-/* Tabla de grilla */
-.grilla-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); }
-
-.grilla-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .78rem;
-  min-width: 900px;
-}
-
-.grilla-table thead th {
-  background: var(--surface);
-  padding: .5rem .6rem;
-  text-align: center;
-  font-size: .68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--slate);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.grilla-th-name { text-align: left !important; min-width: 200px; padding-left: .75rem !important; }
-.grilla-th-stat { min-width: 60px; }
-.grilla-th-mes  { min-width: 52px; }
-.grilla-mes-extra { opacity: .5; } /* Diciembre atenuado */
-
-.grilla-row {
-  border-bottom: 1px solid var(--border);
-  transition: background .1s;
-}
-.grilla-row:last-child { border-bottom: none; }
-.grilla-row:hover { background: var(--sky-pale); }
-
-.grilla-td-name {
-  padding: .45rem .75rem;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  min-height: 38px;
-}
-.grilla-emp-name { font-weight: 500; color: var(--navy); font-size: .78rem; }
-
-.grilla-td-stat {
-  text-align: center;
-  font-family: 'DM Mono', monospace;
-  font-size: .75rem;
-  color: var(--slate);
-  padding: .45rem .4rem;
-  white-space: nowrap;
-}
-
-.grilla-td-mes {
-  padding: .3rem .25rem;
-  text-align: center;
-  vertical-align: middle;
-}
-
-/* Bloque de vacaciones dentro de la celda */
-.grilla-bloque {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--sky);
-  color: white;
-  border-radius: 4px;
-  font-size: .68rem;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
-  padding: .15rem .35rem;
-  margin: .1rem;
-  cursor: default;
-  white-space: nowrap;
-  transition: background .12s;
-}
-.grilla-bloque:hover { background: var(--sky-dark); }
-
-.btn-show-pass {
-  position: absolute;
-  right: .5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: .25rem;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: color .15s, background .15s;
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-}
-.btn-show-pass:hover { color: var(--slate); background: var(--surface); }
-.btn-show-pass svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
-
-/* Asegurar que el wrapper del input tenga position relative */
-.pass-wrap { position: relative; }
-.pass-wrap input { padding-right: 2.75rem !important; }
-
-/* ── Tooltip de grilla ── */
-.grilla-tooltip {
-  position: fixed;
-  z-index: 300;
-  background: var(--navy);
-  color: white;
-  border-radius: 8px;
-  padding: .65rem .9rem;
-  font-size: .78rem;
-  box-shadow: var(--shadow-lg);
-  pointer-events: none;
-  max-width: 240px;
-  line-height: 1.5;
-}
-.grilla-tooltip-dias  { font-size: 1rem; font-weight: 700; color: var(--sky); margin-bottom: .2rem; }
-.grilla-tooltip-fecha { font-size: .72rem; color: rgba(255,255,255,.6); margin-bottom: .25rem; }
-.grilla-tooltip-vuelta { font-size: .72rem; color: #86efac; }
-.grilla-tooltip-desc  { font-size: .75rem; color: rgba(255,255,255,.85); margin-top: .3rem; font-style: italic; }
-
-/* ── Filtros de grilla ── */
-.grilla-filtros {
-  display: flex;
-  gap: .6rem;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-.grilla-filtros .input-wrap { min-width: 200px; flex: 1; }
-.grilla-filtros select { min-width: 160px; }
 /* ══ GRILLA DE VACACIONES ═══════════════════════════════════════════════════ */
 
 /* ── Selector de año ── */
+.grilla-year-controls { display: flex; align-items: center; gap: .5rem; }
 .grilla-year-btn {
   background: rgba(255,255,255,.1);
   border: 1px solid rgba(255,255,255,.2);
@@ -696,7 +536,17 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   text-align: center;
 }
 
-/* ── Leyenda ── */
+/* ── Leyenda y resumen ── */
+.grilla-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.grilla-legend-group { display: flex; align-items: center; gap: 1.25rem; font-size: .78rem; color: var(--slate); }
+.grilla-semaforo-group { display: flex; align-items: center; gap: .5rem; }
 .grilla-legend {
   display: inline-block;
   width: 28px; height: 10px;
@@ -705,6 +555,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   vertical-align: middle;
   margin-right: .25rem;
 }
+#grilla-resumen { font-size: .78rem; color: var(--muted); }
 
 /* ── Semáforos ── */
 .semaforo {
@@ -719,7 +570,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 
 /* ── Sección por dependencia ── */
 .grilla-section { margin-bottom: 1.75rem; }
-
 .grilla-dep-header {
   display: flex;
   align-items: center;
@@ -733,7 +583,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .grilla-dep-name  { font-weight: 700; letter-spacing: .03em; }
 .grilla-dep-stats { font-size: .72rem; color: rgba(255,255,255,.6); font-family: 'DM Mono', monospace; }
 
-/* ── Tabla ── */
+/* ── Tabla de grilla ── */
 .grilla-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -762,14 +612,12 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
 .grilla-th-stat { min-width: 60px; }
 .grilla-th-mes  { min-width: 52px; }
 .grilla-mes-extra { opacity: .5; }
-
 .grilla-row {
   border-bottom: 1px solid var(--border);
   transition: background .1s;
 }
 .grilla-row:last-child { border-bottom: none; }
 .grilla-row:hover { background: var(--sky-pale); }
-
 .grilla-td-name {
   padding: .45rem .75rem;
   display: flex;
@@ -778,7 +626,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   min-height: 38px;
 }
 .grilla-emp-name { font-weight: 500; color: var(--navy); font-size: .78rem; }
-
 .grilla-td-stat {
   text-align: center;
   font-family: 'DM Mono', monospace;
@@ -787,7 +634,6 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   padding: .45rem .4rem;
   white-space: nowrap;
 }
-
 .grilla-td-mes {
   padding: .3rem .25rem;
   text-align: center;
@@ -812,6 +658,36 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   transition: background .12s;
 }
 .grilla-bloque:hover { background: var(--sky-dark); }
+
+/* ── Filtros de grilla ── */
+.grilla-filtros {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.grilla-filtros .input-wrap { min-width: 200px; flex: 1; }
+.grilla-filtros select { min-width: 160px; }
+
+/* ── Tooltip de grilla ── */
+.grilla-tooltip {
+  position: fixed;
+  z-index: 300;
+  background: var(--navy);
+  color: white;
+  border-radius: 8px;
+  padding: .65rem .9rem;
+  font-size: .78rem;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  max-width: 240px;
+  line-height: 1.5;
+}
+.grilla-tooltip-dias  { font-size: 1rem; font-weight: 700; color: var(--sky); margin-bottom: .2rem; }
+.grilla-tooltip-fecha { font-size: .72rem; color: rgba(255,255,255,.6); margin-bottom: .25rem; }
+.grilla-tooltip-vuelta { font-size: .72rem; color: #86efac; }
+.grilla-tooltip-desc  { font-size: .75rem; color: rgba(255,255,255,.85); margin-top: .3rem; font-style: italic; }
 
 /* ══ RESPONSIVE ═════════════════════════════════════════════════════════════ */
 
@@ -852,7 +728,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
     justify-content: center;
   }
   .btn-logout span { display: none; }
-  .btn-logout svg  { width: 15px !important; height: 15px !important; }
+  .btn-logout svg  { width: 15px; height: 15px; }
 
   /* ── Panel de empleados ── */
   .panel-header { padding: .75rem 1rem; flex-wrap: wrap; gap: .4rem; }
