@@ -28,7 +28,7 @@ body {
 }
 
 /* ── Header ── */
-header {
+.site-header {
   background: var(--navy);
   padding: 0 2rem;
   display: flex;
@@ -706,7 +706,7 @@ tbody tr.selected .btn-delete-row { opacity: 1; }
   .app { padding: .75rem; }
 
   /* ── Header: una sola fila, sin texto en botones ── */
-  header {
+  .site-header {
     height: auto;
     min-height: 52px;
     padding: .5rem .75rem;
